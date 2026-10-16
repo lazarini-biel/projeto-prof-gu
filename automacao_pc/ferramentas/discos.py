@@ -178,7 +178,7 @@ def redistribuir(cfg, mapa, aplicar=False, saida=print):
     if not plano:
         return plano
     if not aplicar:
-        saida("\nNada foi movido ainda. Use --executar para aplicar.")
+        saida("\nNada foi movido ainda.")
         return plano
 
     erros = 0
@@ -191,5 +191,5 @@ def redistribuir(cfg, mapa, aplicar=False, saida=print):
                 saida(f"  ! {origem}: {erro}")
             if i % 200 == 0:
                 saida(f"  ... {i}/{len(plano)}")
-    saida(f"\n{len(plano) - erros} arquivo(s) movidos. Para desfazer: python pc.py desfazer")
+    saida(f"\n{len(plano) - erros} arquivo(s) movidos. Para desfazer: py pc.py desfazer")
     return plano

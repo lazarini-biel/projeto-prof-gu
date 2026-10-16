@@ -22,6 +22,7 @@ Sem --executar, os comandos que mexem em arquivos só mostram uma prévia.
 """
 
 import argparse
+import subprocess
 import sys
 import time
 
@@ -42,7 +43,7 @@ def _log_sem_console():
 
 def cmd_organizar(cfg, args):
     c = cfg.get("organizar", {})
-    organizar.executar(
+    return organizar.executar(
         caminho(args.pasta or c.get("pasta", "~/Downloads")),
         montar_mapa(cfg.get("categorias_extras")),
         aplicar=args.executar,
@@ -55,7 +56,7 @@ def cmd_organizar(cfg, args):
 def cmd_duplicados(cfg, args):
     c = cfg.get("duplicados", {})
     pastas = args.pastas or c.get("pastas", ["~"])
-    duplicados.executar(
+    return duplicados.executar(
         [caminho(p) for p in pastas],
         acao=args.acao,
         tamanho_min=int(c.get("tamanho_minimo_kb", 100) * 1024),
@@ -70,15 +71,15 @@ def cmd_discos(cfg, args):
         alvo = args.pastas or ["~"]
         discos.maiores([caminho(p) for p in alvo], top=args.top)
     elif args.acao == "redistribuir":
-        discos.redistribuir(cfg.get("redistribuir", {}), montar_mapa(cfg.get("categorias_extras")),
-                            aplicar=args.executar)
+        return discos.redistribuir(cfg.get("redistribuir", {}),
+                                   montar_mapa(cfg.get("categorias_extras")), aplicar=args.executar)
     else:
         discos.relatorio()
 
 
 def cmd_limpar(cfg, args):
     c = cfg.get("limpeza", {})
-    limpeza.executar(
+    return limpeza.executar(
         aplicar=args.executar,
         idade_horas=c.get("idade_minima_horas", 24),
         navegadores=c.get("navegadores", True),
@@ -184,6 +185,38 @@ def montar_parser():
     return p
 
 
+def _como_aplicar(argv):
+    """Depois de uma prévia: (argumentos que aplicam, pergunta) ou None."""
+    if "--executar" in argv or "--acao" in argv:
+        return None
+    if argv[0] in ("organizar", "limpar") or argv[:2] == ["discos", "redistribuir"]:
+        return argv + ["--executar"], "Aplicar agora?"
+    if argv[0] == "duplicados":
+        return argv + ["--acao", "lixeira"], "Mandar as cópias para a Lixeira?"
+    return None
+
+
+def rodar(cfg, parser, argv, perguntar):
+    """Roda um comando. Se foi só uma prévia com algo a fazer, pergunta se aplica
+    (ou, sem ninguém no teclado, mostra o comando completo para aplicar)."""
+    args = parser.parse_args(argv)
+    resultado = args.func(cfg, args)
+    proximo = _como_aplicar(argv) if resultado else None
+    if not proximo:
+        return
+    argv_aplicar, pergunta = proximo
+    if perguntar:
+        if input(f"\n{pergunta} (s/n) ").strip().lower() in ("s", "sim"):
+            print()
+            rodar(cfg, parser, argv_aplicar, perguntar=False)
+    else:
+        print(f"\nPara aplicar: py pc.py {subprocess.list2cmdline(argv_aplicar)}")
+
+
+def _tem_teclado():
+    return all(f is not None and f.isatty() for f in (sys.stdin, sys.stdout))
+
+
 MENU = [
     ("Organizar a pasta Downloads", ["organizar"]),
     ("Procurar arquivos duplicados", ["duplicados"]),
@@ -197,9 +230,6 @@ MENU = [
     ("Ver tarefas automáticas", ["agendar", "listar"]),
     ("Desfazer a última movimentação", ["desfazer"]),
 ]
-APLICAVEIS = {"organizar": "--executar", "limpar": "--executar", "redistribuir": "--executar"}
-
-
 def menu(cfg, parser):
     while True:
         print("\n╔══════════════════════════════════════╗")
@@ -218,28 +248,20 @@ def menu(cfg, parser):
             minutos = input("Em quantos minutos? ").strip() or "1"
             argv = ["energia", "desligar", "--em", minutos.replace(",", ".")]
         print()
-        args = parser.parse_args(argv)
-        args.func(cfg, args)
-
-        chave = argv[-1] if argv[0] == "discos" else argv[0]
-        if chave in APLICAVEIS and input("\nAplicar agora? (s/n) ").strip().lower() == "s":
-            args = parser.parse_args(argv + [APLICAVEIS[chave]])
-            args.func(cfg, args)
-        elif argv[0] == "duplicados" and input(
-                "\nMandar as cópias para a Lixeira? (s/n) ").strip().lower() == "s":
-            args.func(cfg, parser.parse_args(["duplicados", "--acao", "lixeira"]))
+        rodar(cfg, parser, argv, perguntar=True)
         input("\nEnter para voltar ao menu...")
 
 
 def main(argv=None):
     _log_sem_console()
+    argv = sys.argv[1:] if argv is None else argv
     parser = montar_parser()
     args = parser.parse_args(argv)
     cfg = carregar_config()
     if not args.comando:
         menu(cfg, parser)
     else:
-        args.func(cfg, args)
+        rodar(cfg, parser, argv, perguntar=_tem_teclado())
 
 
 if __name__ == "__main__":

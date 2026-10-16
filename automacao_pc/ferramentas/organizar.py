@@ -70,7 +70,7 @@ def executar(pasta, mapa, aplicar=False, saida=print, **opcoes):
         saida(f"  {categoria:<18} {qtd:>5} arquivo(s) {tamanho_legivel(tamanho):>11}")
 
     if not aplicar:
-        saida("\nNada foi movido ainda. Use --executar para aplicar.")
+        saida("\nNada foi movido ainda.")
         return plano
 
     erros = 0
@@ -83,5 +83,5 @@ def executar(pasta, mapa, aplicar=False, saida=print, **opcoes):
                 saida(f"  ! {origem.name}: {erro}")
     saida(f"\n{len(plano) - erros} arquivo(s) organizados."
           + (f" {erros} em uso/bloqueados ficaram onde estavam." if erros else "")
-          + " Para desfazer: python pc.py desfazer")
+          + " Para desfazer: py pc.py desfazer")
     return plano

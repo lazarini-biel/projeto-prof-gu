@@ -207,7 +207,7 @@ def executar(raizes, acao="relatorio", tamanho_min=1, ignorar=(), preferir=(),
 
     removiveis = [c for g in grupos for c in escolher_original(g, preferir)[1]]
     if acao == "relatorio":
-        saida("Nada foi apagado. Use --acao lixeira (recuperável) ou --acao excluir.")
+        saida("Nada foi apagado ainda.")
         return grupos
 
     if acao == "lixeira":

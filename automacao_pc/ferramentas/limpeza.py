@@ -142,6 +142,5 @@ def executar(aplicar=False, idade_horas=24, navegadores=True, sistema=False,
     for rotulo, valor in resumo.items():
         texto = tamanho_legivel(valor) if isinstance(valor, int) else valor
         saida(f"  {rotulo:<28} {texto}")
-    saida(f"\n{'Liberado' if aplicar else 'Dá para liberar'}: {tamanho_legivel(total_geral)}"
-          + ("" if aplicar else "  (use --executar para limpar)"))
+    saida(f"\n{'Liberado' if aplicar else 'Dá para liberar'}: {tamanho_legivel(total_geral)}")
     return total_geral
