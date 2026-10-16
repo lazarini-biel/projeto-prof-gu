@@ -27,7 +27,7 @@ import sys
 import time
 
 from ferramentas import (agendador, discos, duplicados, energia, inicio, intro, limpeza,
-                         movimentos, organizar, painel_web, remoto, sistema, tema)
+                         movimentos, notas, organizar, painel_web, rede, remoto, sistema, tema)
 from ferramentas.categorias import montar_mapa
 from ferramentas.util import PASTA_LOGS, caminho, carregar_config
 
@@ -159,6 +159,33 @@ def cmd_painel(cfg, args):
     painel_web.iniciar(porta=cfg.get("painel_web", {}).get("porta", 0))
 
 
+def cmd_fechar(cfg, args):
+    sistema.fechar()
+
+
+def cmd_internet(cfg, args):
+    rede.testar()
+
+
+def cmd_rede(cfg, args):
+    rede.dispositivos()
+
+
+def cmd_notas(cfg, args):
+    if args.acao == "add":
+        notas.adicionar(" ".join(args.resto))
+    elif args.acao == "rm":
+        notas.remover(int(args.resto[0]) if args.resto and args.resto[0].isdigit() else 0)
+    elif args.acao == "limpar":
+        notas.limpar()
+    else:
+        notas.listar()
+        if _tem_teclado():
+            nova = input("\nNova nota (Enter para voltar): ").strip()
+            if nova:
+                notas.adicionar(nova)
+
+
 def montar_parser():
     p = argparse.ArgumentParser(prog="pc.py", description="Central de automações do PC.")
     sub = p.add_subparsers(dest="comando")
@@ -222,6 +249,20 @@ def montar_parser():
 
     s = sub.add_parser("painel", help="abre o painel do PC no navegador")
     s.set_defaults(func=cmd_painel)
+
+    s = sub.add_parser("fechar", help="liberar memória: fechar processos escolhidos")
+    s.set_defaults(func=cmd_fechar)
+
+    s = sub.add_parser("internet", help="testa a internet (ping + velocidade)")
+    s.set_defaults(func=cmd_internet)
+
+    s = sub.add_parser("rede", help="lista dispositivos na rede local")
+    s.set_defaults(func=cmd_rede)
+
+    s = sub.add_parser("notas", help="lembretes/notas (add, rm, limpar)")
+    s.add_argument("acao", nargs="?", choices=["listar", "add", "rm", "limpar"], default="listar")
+    s.add_argument("resto", nargs="*")
+    s.set_defaults(func=cmd_notas)
     return p
 
 
@@ -242,13 +283,16 @@ _TITULOS_CMD = {
     "energia": "Energia", "agendar": "Tarefas automáticas", "desfazer": "Desfazer",
     "remoto": "Controle remoto", "sistema": "Informações do PC",
     "top": "Top processos", "painel": "Painel no navegador", "pastas": "Espaço por pasta",
+    "fechar": "Liberar memória", "internet": "Teste de internet", "rede": "Dispositivos na rede",
+    "notas": "Lembretes / notas",
 }
 
 
 def rodar(cfg, parser, argv, perguntar, topo=True):
     """Roda um comando. Se foi só uma prévia com algo a fazer, pergunta se aplica
     (ou, sem ninguém no teclado, mostra o comando completo para aplicar)."""
-    if topo and argv and argv[0] not in ("sistema", "top"):   # têm cabeçalho próprio
+    if topo and argv and argv[0] not in (
+            "sistema", "top", "fechar", "internet", "rede", "notas"):   # têm cabeçalho próprio
         tema.cabecalho(_TITULOS_CMD.get(argv[0], argv[0]))
         print()
     args = parser.parse_args(argv)
@@ -272,7 +316,11 @@ def _tem_teclado():
 MENU = [
     ("Ver informações do PC", ["sistema"]),
     ("Top processos (quem usa CPU/RAM)", ["top"]),
+    ("Liberar memória / fechar programas", ["fechar"]),
     ("Painel do PC no navegador", ["painel"]),
+    ("Testar internet", ["internet"]),
+    ("Dispositivos na rede", ["rede"]),
+    ("Lembretes / notas", ["notas"]),
     ("Organizar a pasta Downloads", ["organizar"]),
     ("Procurar arquivos duplicados", ["duplicados"]),
     ("Ver espaço dos discos", ["discos"]),

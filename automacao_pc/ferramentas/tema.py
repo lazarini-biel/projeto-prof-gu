@@ -63,11 +63,11 @@ def saida(texto=""):
 def cabecalho(titulo, sub=""):
     """Imprime um cabeçalho em caixa vermelha."""
     larg = 56
-    t = f"  ◢ SPARTA ▸ {titulo}"
+    t = f"  ◢ SPARTA ▸ {titulo}"[:larg]
     print(VIVO + "╔" + "═" * larg + "╗" + _R)
     print(VIVO + "║" + _R + BG_FORTE + BRANCO + t.ljust(larg) + _R + VIVO + "║" + _R)
     if sub:
-        print(VIVO + "║ " + _R + CINZA + sub.ljust(larg - 2) + _R + VIVO + "║" + _R)
+        print(VIVO + "║ " + _R + CINZA + sub[:larg - 2].ljust(larg - 2) + _R + VIVO + "║" + _R)
     print(VIVO + "╚" + "═" * larg + "╝" + _R)
 
 

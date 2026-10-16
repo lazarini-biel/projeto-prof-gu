@@ -182,3 +182,77 @@ def top(saida=None, n=15):
         pct = mem / total * 100 if total else 0
         tema.saida(f"  {tema.cor(f'{pid:>7}', tema.CINZA)}  {tema.realce(f'{pct:4.1f}%')}  "
                    f"{tema.realce(f'{tamanho_legivel(mem):>9}')}  {nome}")
+
+
+# Processos do sistema que NUNCA são oferecidos para fechar (quebraria o Windows).
+_CRITICOS = {
+    "system", "system idle process", "registry", "memory compression", "idle",
+    "csrss.exe", "wininit.exe", "winlogon.exe", "services.exe", "lsass.exe",
+    "smss.exe", "svchost.exe", "dwm.exe", "fontdrvhost.exe", "explorer.exe",
+    "ctfmon.exe", "python.exe", "pythonw.exe", "conhost.exe", "sihost.exe",
+    "taskhostw.exe", "runtimebroker.exe", "shellexperiencehost.exe",
+    "systemd", "init", "kthreadd", "bash", "sh",
+}
+# Apps de segundo plano que costumam ser "fecháveis" sem dó (sugestão).
+_DESNECESSARIOS = {
+    "googleupdate.exe", "onedrive.exe", "spotify.exe", "discord.exe", "teams.exe",
+    "steam.exe", "steamwebhelper.exe", "epicgameslauncher.exe", "skype.exe",
+    "cortana.exe", "yourphone.exe", "gameoverlayui.exe", "msedge.exe",
+    "widgets.exe", "searchapp.exe", "spotifywebhelper.exe", "razer central.exe",
+    "nvidia web helper.exe", "adobe desktop service.exe", "acrotray.exe",
+}
+
+
+def _matar(pid):
+    try:
+        if WINDOWS:
+            r = subprocess.run(["taskkill", "/PID", str(pid), "/F", "/T"],
+                               capture_output=True, **_SW_OCULTO)
+            return r.returncode == 0
+        os.kill(pid, 15)
+        return True
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def fechar(saida=None, entrada=input, n=22):
+    """Lista processos (poupando os do sistema) e fecha os que você escolher."""
+    from .util import processos_detalhados, memoria
+    total, _ = memoria()
+    candidatos = [(pid, nome, mem) for pid, nome, mem in processos_detalhados(60)
+                  if nome.lower() not in _CRITICOS][:n]
+    tema.cabecalho("Liberar memória / fechar processos",
+                   "escolha o que encerrar — os processos do Windows ficam de fora")
+    if not candidatos:
+        tema.saida("Nada para mostrar.")
+        return
+    tema.saida(tema.cor(f"  {'#':>2}  {'PID':>7}  {'MEMÓRIA':>9}  PROGRAMA", tema.VIVO))
+    for i, (pid, nome, mem) in enumerate(candidatos, 1):
+        dica = tema.cor("  ⚠ dá para fechar", tema.ROSA) if nome.lower() in _DESNECESSARIOS else ""
+        pct = mem / total * 100 if total else 0
+        tema.saida(f"  {tema.cor(f'{i:>2}', tema.VIVO)}  {tema.cor(f'{pid:>7}', tema.CINZA)}  "
+                   f"{tema.realce(f'{tamanho_legivel(mem):>9}')}  {nome}{dica} "
+                   f"{tema.cor(f'({pct:.1f}%)', tema.CINZA)}")
+    resp = entrada("\nQuais fechar? (números separados por espaço, Enter cancela): ").strip()
+    if not resp:
+        tema.saida("Cancelado.")
+        return
+    escolhidos = []
+    for parte in resp.replace(",", " ").split():
+        if parte.isdigit() and 1 <= int(parte) <= len(candidatos):
+            escolhidos.append(candidatos[int(parte) - 1])
+    if not escolhidos:
+        tema.saida("Nenhum número válido.")
+        return
+    nomes = ", ".join(nome for _, nome, _ in escolhidos)
+    if entrada(f"Fechar {len(escolhidos)} ({nomes})? (s/n) ").strip().lower() not in ("s", "sim"):
+        tema.saida("Cancelado.")
+        return
+    ok = 0
+    for pid, nome, _ in escolhidos:
+        if _matar(pid):
+            ok += 1
+            tema.saida(tema.cor(f"  ✓ fechado: {nome} (PID {pid})", tema.ROSA))
+        else:
+            tema.saida(tema.cor(f"  ! não consegui fechar {nome} (PID {pid}) — tente como administrador", tema.VIVO))
+    tema.saida(tema.bom(f"\n{ok} processo(s) encerrados."))

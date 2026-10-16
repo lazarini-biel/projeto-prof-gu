@@ -34,6 +34,32 @@ Na primeira vez ele cria o `config.json`. **Abra esse arquivo no Bloco de Notas 
 > Tudo que mexe em arquivos mostra primeiro uma **prévia** e só aplica com `--executar` (ou quando você responde "s" no menu).
 > Movimentações podem ser desfeitas com `py pc.py desfazer`.
 
+### Liberar memória / fechar programas
+```
+py pc.py fechar
+```
+Lista os programas que mais usam memória (sem os do Windows) e fecha os que você escolher. Os pesados de segundo plano ganham um aviso "⚠ dá para fechar".
+
+### Testar internet
+```
+py pc.py internet
+```
+Mede ping e velocidade de download e guarda um histórico das últimas medições.
+
+### Dispositivos na rede
+```
+py pc.py rede
+```
+Lista os aparelhos que seu PC enxergou na rede local (IP e MAC).
+
+### Lembretes / notas
+```
+py pc.py notas                 lista as notas
+py pc.py notas add "comprar HD"
+py pc.py notas rm 2
+```
+Notas rápidas salvas só no seu PC (notas.json).
+
 ### Painel do PC no navegador
 ```
 py pc.py painel
