@@ -22,12 +22,12 @@ def _shutdown(argumentos, minutos=None, mensagem=None):
 
 
 def desligar(minutos=1):
-    ok, erro = _shutdown(["/s"], minutos, f"O PC vai desligar em {minutos} min (AutomacaoPC).")
+    ok, erro = _shutdown(["/s"], minutos, f"O PC vai desligar em {minutos} min (SPARTA).")
     return ok, f"Desligando em {minutos} min." if ok else erro
 
 
 def reiniciar(minutos=1):
-    ok, erro = _shutdown(["/r"], minutos, f"O PC vai reiniciar em {minutos} min (AutomacaoPC).")
+    ok, erro = _shutdown(["/r"], minutos, f"O PC vai reiniciar em {minutos} min (SPARTA).")
     return ok, f"Reiniciando em {minutos} min." if ok else erro
 
 

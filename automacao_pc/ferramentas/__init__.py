@@ -1,1 +1,1 @@
-"""Módulos da central AutomacaoPC (veja pc.py)."""
+"""Módulos da central SPARTA (veja pc.py)."""

@@ -1,4 +1,4 @@
-# AutomaçãoPC + COFRE
+# SPARTA
 
 Duas coisas para o seu Windows 11:
 
@@ -21,7 +21,7 @@ Duas coisas para o seu Windows 11:
 
 ## 2. A central (`pc.py`)
 
-Dê dois cliques em **`AutomacaoPC.bat`**. Ele abre em **tela cheia** no Windows Terminal, mostra uma abertura animada (painéis estilo tmux com dados reais do PC; qualquer tecla pula) e depois o menu numerado. Esse é o jeito mais fácil.
+Dê dois cliques em **`SPARTA.bat`**. Ele abre em **tela cheia** no Windows Terminal, mostra uma abertura animada (painéis estilo tmux com dados reais do PC; qualquer tecla pula) e depois o menu numerado. Esse é o jeito mais fácil.
 Para desligar a abertura: `"abertura": false` no `config.json`.
 Na primeira vez ele cria o `config.json`. **Abra esse arquivo no Bloco de Notas e ajuste para o seu PC** (pastas, discos, programas).
 
@@ -100,7 +100,7 @@ py pc.py agendar listar
 py pc.py agendar remover
 ```
 `quando` pode ser `logon` (ao entrar no Windows), `diario` + `hora`, `semanal` + `dias` (`dom, seg, ter, qua, qui, sex, sab`) + `hora`, ou `a_cada_horas` + `horas`.
-As tarefas rodam sem janela; o que elas fazem fica em `logs/automacao.log`.
+As tarefas rodam sem janela; o que elas fazem fica em `logs/sparta.log`.
 Se o PC estiver desligado no horário, a tarefa roda quando ele ligar. A exceção é desligar/reiniciar, para o PC não desligar assim que você o liga.
 
 ### Controle remoto pelo celular (Telegram)
@@ -181,7 +181,7 @@ py -m unittest discover -s testes
 ```
 automacao_pc/
 ├── pc.py                  central (menu e linha de comando)
-├── AutomacaoPC.bat        atalho de dois cliques
+├── SPARTA.bat             atalho de dois cliques
 ├── config.exemplo.json    modelo de configuração
 ├── ferramentas/           organizar, duplicados, discos, limpeza, início,
 │                          energia, agendador, remoto (Telegram), navegadores

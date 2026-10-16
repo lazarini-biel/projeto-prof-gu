@@ -1,5 +1,5 @@
 """
-AutomacaoPC — central de automações do seu Windows.
+SPARTA — central de automações do seu Windows.
 
 Sem argumentos abre um menu. Com argumentos, roda direto (é assim que o
 Agendador de Tarefas usa). Exemplos:
@@ -36,7 +36,7 @@ def _log_sem_console():
     """Rodando pelo Agendador (pythonw) não há console: a saída vai para logs/."""
     if sys.stdout is None:
         PASTA_LOGS.mkdir(parents=True, exist_ok=True)
-        arquivo = open(PASTA_LOGS / "automacao.log", "a", encoding="utf-8", buffering=1)
+        arquivo = open(PASTA_LOGS / "sparta.log", "a", encoding="utf-8", buffering=1)
         sys.stdout = sys.stderr = arquivo
         print(f"\n=== {time.strftime('%d/%m/%Y %H:%M:%S')} — {' '.join(sys.argv[1:])}")
 
@@ -235,7 +235,7 @@ def menu(cfg, parser):
         intro.executar(cfg.get("agendamentos", []))
     while True:
         print("\n╔══════════════════════════════════════╗")
-        print("║          A U T O M A Ç Ã O   P C      ║")
+        print("║" + "S  P  A  R  T  A".center(38) + "║")
         print("╚══════════════════════════════════════╝")
         for i, (rotulo, _) in enumerate(MENU, 1):
             print(f"  {i:>2}. {rotulo}")

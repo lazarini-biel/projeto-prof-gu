@@ -259,7 +259,7 @@ class Abertura:
         l = self.c1
         self.prompt(q, 0, 1, "py pc.py --abertura", t, 0.1, l)
         altura = max(6, self.meio - 6)
-        arte, linha_texto, (tx, tl) = asas(l - 2, altura, "A U T O M A Ç Ã O   P C")
+        arte, linha_texto, (tx, tl) = asas(l - 2, altura, "S   P   A   R   T   A")
         revelado = min(len(arte), int(max(0, t - 0.8) * 14))   # a arte surge linha a linha
         for i, linha in enumerate(arte[:revelado]):
             for j, c in enumerate(linha):
@@ -418,7 +418,7 @@ class Abertura:
         y = self.y_canos - 3
         q.escrever(x0, y, "─" * l, CINZA)
         progresso = min(1.0, t / DURACAO)
-        texto = f"Tocando: abertura // {time.strftime('%Y')} // AUTOMAÇÃO PC // [0:{int(t):02}/0:{int(DURACAO):02}]"
+        texto = f"Tocando: abertura // {time.strftime('%Y')} // SPARTA // [0:{int(t):02}/0:{int(DURACAO):02}]"
         q.escrever(x0, y + 1, texto, BRANCO, ate=self.l)
         cheio = int(progresso * l)
         q.escrever(x0, y + 2, "━" * cheio, VIVO)

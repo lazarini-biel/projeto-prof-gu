@@ -146,7 +146,7 @@ async function iniciar() {
 
   estado.criando = !st.existe;
   await digitarLinhas($("#boot"), [
-    "INICIALIZANDO PROTOCOLO DE SEGURANÇA...",
+    "SPARTA // INICIALIZANDO PROTOCOLO DE SEGURANÇA...",
     "CANAL CRIPTOGRAFADO: AES-256-GCM // CHAVE: SCRYPT",
     st.existe ? "COFRE LOCALIZADO. AGUARDANDO CREDENCIAL DO AGENTE."
               : "NENHUM COFRE ENCONTRADO. DEFINA SUA CREDENCIAL MESTRA.",
@@ -298,7 +298,7 @@ async function entrarNoCofre() {
 
 async function carregar(manterSelecao = true) {
   estado.entradas = await api.entradas();
-  $("#contagem").textContent = `${estado.entradas.length} registro${estado.entradas.length === 1 ? "" : "s"}`;
+  $("#contagem").textContent = `cofre · ${estado.entradas.length} registro${estado.entradas.length === 1 ? "" : "s"}`;
   desenharCategorias();
   desenharLista();
   if (manterSelecao && estado.selecionado && estado.entradas.some((e) => e.id === estado.selecionado)) {

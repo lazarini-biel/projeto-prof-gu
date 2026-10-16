@@ -1,7 +1,7 @@
 """
 Cria as tarefas do Agendador de Tarefas do Windows a partir do config.
 
-Cada item de "agendamentos" vira uma tarefa na pasta "AutomacaoPC" do
+Cada item de "agendamentos" vira uma tarefa na pasta "SPARTA" do
 Agendador, rodando `pythonw pc.py <comando>` (sem janela preta). As tarefas
 são geradas em XML, o que permite:
   - rodar mesmo no notebook fora da tomada;
@@ -21,7 +21,8 @@ from xml.sax.saxutils import escape
 
 from .util import PASTA_BASE, WINDOWS, eh_admin
 
-PASTA_AGENDADOR = "AutomacaoPC"
+PASTA_AGENDADOR = "SPARTA"
+PASTA_ANTIGA = "AutomacaoPC"   # nome antigo: tarefas de lá são removidas ao reinstalar
 DIAS = {"dom": "Sunday", "seg": "Monday", "ter": "Tuesday", "qua": "Wednesday",
         "qui": "Thursday", "sex": "Friday", "sab": "Saturday"}
 
@@ -75,7 +76,7 @@ def gerar_xml(item, usuario, pythonw=None, script=None):
     argumentos = f'"{script}" {comando}'
     return f"""<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-  <RegistrationInfo><Description>{escape(item.get('nome', comando))} — criado por AutomacaoPC</Description></RegistrationInfo>
+  <RegistrationInfo><Description>{escape(item.get('nome', comando))} — criado por SPARTA</Description></RegistrationInfo>
   <Triggers>{_gatilho(item, usuario)}</Triggers>
   <Principals>
     <Principal id="Author">
@@ -130,6 +131,7 @@ def instalar(agendamentos, usuario=None, saida=print, pausar=False):
 
     criadas = 0
     for item in agendamentos:
+        _schtasks("/Delete", "/F", "/TN", f"{PASTA_ANTIGA}\\{item['nome']}")
         nome = f"{PASTA_AGENDADOR}\\{item['nome']}"
         if not item.get("ativo", True):
             _schtasks("/Delete", "/F", "/TN", nome)   # se existia, desativa
@@ -158,7 +160,7 @@ def listar(saida=print):
     ok, texto = _schtasks("/Query", "/FO", "CSV", "/NH")
     tarefas = [l for l in texto.splitlines() if f"\\{PASTA_AGENDADOR}\\" in l]
     if not tarefas:
-        saida("Nenhuma tarefa da AutomacaoPC instalada.")
+        saida("Nenhuma tarefa do SPARTA instalada.")
     for linha in tarefas:
         nome, proxima, status = [c.strip('"') for c in linha.split('","')][:3]
         saida(f"  {nome.split(chr(92))[-1]:<32} próxima: {proxima:<22} {status}")

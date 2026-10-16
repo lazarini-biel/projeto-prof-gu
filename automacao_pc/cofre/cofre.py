@@ -1,5 +1,5 @@
 """
-COFRE — gerenciador de senhas portátil.
+SPARTA // COFRE — gerenciador de senhas portátil.
 
 Rode com:
     python cofre.py                 usa/cria "cofre.dat" ao lado do programa
@@ -30,7 +30,7 @@ from ferramentas import navegadores   # noqa: E402
 import autotipo   # noqa: E402
 import nucleo   # noqa: E402
 
-TITULO = "COFRE // acesso restrito"
+TITULO = "SPARTA // COFRE"
 
 
 def pasta_do_programa():

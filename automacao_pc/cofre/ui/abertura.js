@@ -28,7 +28,7 @@
     const barra = document.createElement("div");
     barra.className = "barra-titulo";
     const titulo = document.createElement("span");
-    titulo.textContent = `C:\\COFRE\\${fonte.nome} — cmd.exe`;
+    titulo.textContent = `C:\\SPARTA\\${fonte.nome} — cmd.exe`;
     const botoes = document.createElement("span");
     botoes.className = "botoes-titulo";
     for (const b of ["_", "□", "×"]) {
@@ -99,7 +99,7 @@
           j.tela.scrollTop = j.tela.scrollHeight;
         }
         const pct = Math.min(100, Math.round((t / DURACAO) * 100));
-        rodape.textContent = `CARREGANDO MÓDULOS DO COFRE  [${"█".repeat(pct / 5)}${"░".repeat(20 - pct / 5)}]  ${pct}%   ·   qualquer tecla pula`;
+        rodape.textContent = `SPARTA // CARREGANDO MÓDULOS DO COFRE  [${"█".repeat(pct / 5)}${"░".repeat(20 - pct / 5)}]  ${pct}%   ·   qualquer tecla pula`;
         if (t >= DURACAO) finalizar();
         else requestAnimationFrame(quadro);
       };
