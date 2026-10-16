@@ -1,12 +1,16 @@
 """
-Abertura animada no terminal, antes do menu (estilo painel de filme).
+Abertura animada no terminal, antes do menu, no estilo "rice" de tmux:
+várias telas de terminal lado a lado, todas se mexendo ao mesmo tempo.
 
-Divide o terminal em painéis, como um tmux, e anima todos ao mesmo tempo:
-logo, passos da inicialização com dados reais do PC, memória e discos,
-grade de cores, módulos carregando, circuito se desenhando e chuva de
-caracteres. Qualquer tecla pula.
+  ┌ abas ─────────────────────────────────────────────────── data/hora ┐
+  │ prompt + asas em ASCII  │ caixas + cadeado ASCII    │ fila de tarefas │
+  │                         │ aviso                     │ canos           │
+  │ monitor (htop) com      │ tabela de cores 40m..47m  │                 │
+  │ processos reais         │ prompt + tanques em pixel │ chuva (cmatrix) │
+  └────────────────────────────────────────────────────────────────────┘
 
-Usa só códigos ANSI (o Windows Terminal entende), sem bibliotecas extras.
+Os números (memória, discos, processos, tempo ligado, tarefas) são reais.
+Qualquer tecla pula. Usa só códigos ANSI, sem bibliotecas extras.
 """
 
 import math
@@ -16,36 +20,22 @@ import shutil
 import sys
 import time
 
-from .util import WINDOWS, info_sistema, tamanho_legivel
+from .util import WINDOWS, info_sistema, processos_detalhados, tamanho_legivel
 
-QPS = 20            # quadros por segundo
-DURACAO = 5.5       # segundos até "SISTEMA PRONTO"
+QPS = 20
+DURACAO = 6.5
 
-VERMELHOS = [(70, 8, 20), (110, 14, 34), (150, 20, 48), (195, 28, 62), (235, 40, 78),
-             (255, 70, 105), (255, 120, 150), (255, 170, 190), (255, 215, 225)]
-ESCURO, MEDIO, FORTE, VIVO, CLARO = VERMELHOS[1], VERMELHOS[3], VERMELHOS[4], VERMELHOS[5], VERMELHOS[7]
-BRANCO = (245, 245, 245)
-CINZA = (115, 115, 125)
-FUNDO = (10, 10, 14)
-
-MODULOS = ["organizar", "duplicados", "discos", "limpeza", "inicio",
-           "energia", "agendador", "remoto", "cofre"]
-
-FONTE = {
-    "A": [" ███ ", "█   █", "█████", "█   █", "█   █"],
-    "U": ["█   █", "█   █", "█   █", "█   █", " ███ "],
-    "T": ["█████", "  █  ", "  █  ", "  █  ", "  █  "],
-    "O": [" ███ ", "█   █", "█   █", "█   █", " ███ "],
-    "M": ["█   █", "██ ██", "█ █ █", "█   █", "█   █"],
-    "C": [" ████", "█    ", "█    ", "█    ", " ████"],
-    "P": ["████ ", "█   █", "████ ", "█    ", "█    "],
-    " ": ["  ", "  ", "  ", "  ", "  "],
-}
-
-
-def letreiro(texto):
-    """Texto em letras grandes (5 linhas)."""
-    return [" ".join(FONTE[c][i] for c in texto) for i in range(5)]
+# Paleta: cinza de fundo como no tmux + vermelhos
+FUNDO = (38, 38, 41)
+FUNDO_ESCURO = (28, 28, 30)
+TEXTO = (205, 205, 210)
+CINZA = (120, 120, 128)
+BRANCO = (250, 250, 250)
+PRETO = (16, 16, 18)
+VERMELHOS = [(92, 22, 34), (128, 24, 44), (170, 28, 56), (205, 34, 66), (232, 52, 86),
+             (245, 92, 122), (250, 140, 165), (252, 190, 205), (255, 228, 234)]
+ESCURO, MEDIO, FORTE, VIVO = VERMELHOS[0], VERMELHOS[2], VERMELHOS[3], VERMELHOS[4]
+ROSA, CLARO = VERMELHOS[5], VERMELHOS[6]
 
 
 # ------------------------------------------------------------------ terminal
@@ -102,25 +92,32 @@ class Quadro:
     def __init__(self, largura, altura):
         self.l, self.a = largura, altura
         self.car = [[" "] * largura for _ in range(altura)]
-        self.fg = [[CINZA] * largura for _ in range(altura)]
+        self.fg = [[TEXTO] * largura for _ in range(altura)]
         self.bg = [[FUNDO] * largura for _ in range(altura)]
 
-    def escrever(self, x, y, texto, fg=CINZA, bg=None):
+    def escrever(self, x, y, texto, fg=TEXTO, bg=None, ate=None):
+        """Escreve na linha y a partir de x; `ate` corta o texto nessa coluna."""
         if not 0 <= y < self.a:
             return
+        limite = min(self.l, self.l if ate is None else ate)
         for i, c in enumerate(texto):
-            if 0 <= x + i < self.l:
+            if 0 <= x + i < limite:
                 self.car[y][x + i] = c
                 self.fg[y][x + i] = fg
                 if bg:
                     self.bg[y][x + i] = bg
+
+    def pintar_fundo(self, x, y, largura, altura, cor):
+        for yy in range(max(0, y), min(self.a, y + altura)):
+            for xx in range(max(0, x), min(self.l, x + largura)):
+                self.bg[yy][xx] = cor
 
     def ansi(self, anterior=None):
         """Códigos ANSI do quadro. Com o quadro anterior, só redesenha o que mudou."""
         partes = []
         cor_atual = None
         for y in range(self.a):
-            proximo_x = None   # onde o cursor está, se estiver nesta linha
+            proximo_x = None
             for x in range(self.l):
                 celula = (self.car[y][x], self.fg[y][x], self.bg[y][x])
                 if anterior and celula == (anterior.car[y][x], anterior.fg[y][x], anterior.bg[y][x]):
@@ -138,209 +135,381 @@ class Quadro:
         return "".join(partes)
 
 
-class Painel:
-    def __init__(self, x, y, l, a, titulo):
-        self.x, self.y, self.l, self.a, self.titulo = x, y, max(l, 4), max(a, 3), titulo
-
-    @property
-    def dentro(self):
-        return self.x + 1, self.y + 1, self.l - 2, self.a - 2
-
-    def moldura(self, q, destaque):
-        q.escrever(self.x, self.y, "┌" + "─" * (self.l - 2) + "┐", ESCURO)
-        for yy in range(self.y + 1, self.y + self.a - 1):
-            q.escrever(self.x, yy, "│", ESCURO)
-            q.escrever(self.x + self.l - 1, yy, "│", ESCURO)
-        q.escrever(self.x, self.y + self.a - 1, "└" + "─" * (self.l - 2) + "┘", ESCURO)
-        q.escrever(self.x + 2, self.y, f"[ {self.titulo} ]"[: self.l - 4], VIVO if destaque else FORTE)
-
-
 def _misturar(a, b, t):
+    t = max(0.0, min(1.0, t))
     return tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
-def _barra(valor, largura):
-    cheios = round(max(0.0, min(1.0, valor)) * largura)
-    return "█" * cheios + "░" * (largura - cheios)
+# --------------------------------------------------------------- arte ASCII
+def asas(largura, altura, texto):
+    """Asas abertas no estilo figlet ("dXb", "9XP") com um texto no meio.
+    Devolve (linhas, linha do texto, (coluna inicial do texto, largura))."""
+    meio = largura // 2
+    grade = [[" "] * largura for _ in range(altura)]
+    faixa = max(2, altura // 3)            # até aqui: pontas das penas subindo
+
+    def por(x, y, c):
+        if 0 <= x < largura and 0 <= y < altura:
+            grade[y][x] = c
+
+    for r in range(altura):
+        if r == 0:
+            for frac in (0.95, 0.62, 0.3):
+                d = int(meio * frac)
+                por(meio - d, r, ".")
+                por(meio + d - 1, r, ".")
+        elif r < faixa:
+            for frac in (0.92, 0.6, 0.3):
+                d = int(meio * frac) - (faixa - r)
+                por(meio - d, r, "d")
+                por(meio - d + 1, r, "P")
+                por(meio + d - 2, r, "9")
+                por(meio + d - 1, r, "b")
+        else:
+            f = (r - faixa) / max(1, altura - faixa - 1)
+            externo = int(meio * (1.0 - 0.78 * f))
+            interno = 0 if r < faixa + 2 else int(meio * 0.06)
+            for d in range(interno, externo):
+                if (d + r * 3) % 11 == 0 and d < externo - 2:
+                    continue                # vão entre as penas
+                ponta = d == externo - 1
+                direita = ("b" if f < 0.5 else "P") if ponta else "X"
+                esquerda = ("d" if f < 0.5 else "9") if ponta else "X"
+                por(meio - 1 - d, r, esquerda)
+                por(meio + d, r, direita)
+
+    linha_texto = min(altura - 1, faixa + 1)
+    rotulo = f"  {texto}  "
+    x0 = meio - len(rotulo) // 2
+    for i, c in enumerate(rotulo):
+        por(x0 + i, linha_texto, c)
+    return ["".join(l) for l in grade], linha_texto, (x0, len(rotulo))
+
+
+def cadeado(largura, altura):
+    """Cadeado grande feito de "8", "d", "b", "Y", "P", com fundo pontilhado ":"."""
+    grade = [[":" if (x + y) % 2 == 0 else " " for x in range(largura)] for y in range(altura)]
+    cx = largura // 2
+    alca = max(3, altura * 2 // 5)
+    raio = max(4, min(largura // 4, alca * 2))
+    for y in range(alca):
+        dy = (alca - y) / alca
+        for x in range(largura):
+            dist = math.hypot((x - cx) / raio, dy * 1.05)
+            if 0.62 <= dist <= 1.0:
+                grade[y][x] = "8"
+            elif 0.5 <= dist < 0.62 or 1.0 < dist <= 1.1:
+                grade[y][x] = " "
+    meia = int(raio * 1.35)
+    for y in range(alca, altura):
+        for x in range(max(0, cx - meia), min(largura, cx + meia + 1)):
+            esq, dir_ = x == cx - meia, x == cx + meia
+            c = "8"
+            if y == alca:
+                c = "d" if esq else "b" if dir_ else "8"
+            elif y == altura - 1:
+                c = "Y" if esq else "P" if dir_ else "8"
+            grade[y][x] = c
+    fy = alca + (altura - alca) // 2           # buraco da fechadura
+    for y, desenho in ((fy - 1, " d8b "), (fy, " Y8P "), (fy + 1, "  8  ")):
+        for i, c in enumerate(desenho):
+            if 0 <= y < altura and 0 <= cx - 2 + i < largura:
+                grade[y][cx - 2 + i] = " " if c in " 8" else c
+    return ["".join(l) for l in grade]
+
+
+TANQUE = ["   ▄██▄   ",
+          " ▄██████▄ ",
+          "██▀████▀██",
+          "██ ▀▀▀▀ ██"]
 
 
 # ------------------------------------------------------------------ abertura
 class Abertura:
-    def __init__(self, largura, altura, info):
-        self.l, self.a, self.info = largura, altura, info
+    def __init__(self, largura, altura, info, tarefas=(), processos=()):
+        self.l, self.a = largura, altura
+        self.info = info
+        self.tarefas = list(tarefas)
+        self.processos = list(processos)
         self.rng = random.Random()
-        mem = info["memoria_usada"] / info["memoria_total"] if info["memoria_total"] else 0
-        self.passos = [
-            (0.3, f"usuário ...................... {info['usuario']}@{info['maquina']}"),
-            (0.8, f"sistema ...................... {info['sistema']}"),
-            (1.4, "configuração ................. carregada"),
-            (2.0, f"discos encontrados ........... {len(info['discos'])}"),
-            (2.6, f"memória em uso ............... {mem:.0%}"),
-            (3.2, f"ligado há .................... {info['ligado']}"),
-            (3.8, f"módulos prontos .............. {len(MODULOS)}"),
-            (4.6, "bem-vindo."),
-        ]
+        self.usuario = f"{info['usuario']}@{info['maquina']}"
+        self.cpu = [self.rng.uniform(0.15, 0.5) for _ in range(min(info["nucleos"], 4))]
+        self.canos = []
+        self.ocupado = {}
         self.gotas = []
-        self.trilhas = {}
-        self.pontas = []
-        self.montar()
+        self.c1 = int(largura * 0.345)
+        self.c2 = int(largura * 0.70)
+        self.meio = 1 + int((altura - 1) * 0.47)
+        self.y_canos = self.meio - 1
+        self.a_canos = max(4, int((altura - self.y_canos) * 0.45))
 
-    def montar(self):
-        l, a = self.l, self.a
-        c1, c2 = int(l * 0.40), int(l * 0.68)
-        meio = 1 + int((a - 2) * 0.55)
-        self.p_logo = Painel(0, 1, c1, meio - 1, "AUTOMAÇÃO PC")
-        self.p_sistema = Painel(0, meio, c1, a - 1 - meio, "SISTEMA")
-        meio2 = 1 + (a - 2) // 2
-        self.p_espectro = Painel(c1, 1, c2 - c1, meio2 - 1, "ESPECTRO")
-        self.p_modulos = Painel(c1, meio2, c2 - c1, a - 1 - meio2, "MÓDULOS")
-        self.p_circuito = Painel(c2, 1, l - c2, meio2 - 1, "CIRCUITO")
-        self.p_matriz = Painel(c2, meio2, l - c2, a - 1 - meio2, "MATRIZ")
-        self.paineis = [self.p_logo, self.p_sistema, self.p_espectro,
-                        self.p_modulos, self.p_circuito, self.p_matriz]
+    def prompt(self, q, x, y, comando, t, inicio, ate):
+        q.escrever(x, y, "[", ROSA, ate=ate)
+        q.escrever(x + 1, y, self.usuario, BRANCO, ate=ate)
+        q.escrever(x + 1 + len(self.usuario), y, "]", ROSA, ate=ate)
+        q.escrever(x, y + 1, "[", ROSA, ate=ate)
+        q.escrever(x + 1, y + 1, "~", BRANCO, ate=ate)
+        q.escrever(x + 2, y + 1, "]> ", ROSA, ate=ate)
+        digitado = comando[: max(0, int((t - inicio) * 30))]
+        cursor = "█" if int(t * 3) % 2 or len(digitado) < len(comando) else " "
+        q.escrever(x + 5, y + 1, digitado + cursor, BRANCO, ate=ate)
 
-    # ---- painéis ----------------------------------------------------------
-    def logo(self, q, t):
-        x, y, l, a = self.p_logo.dentro
-        linhas = letreiro("AUTOMACAO") if l >= 56 else letreiro("PC")
-        largura = len(linhas[0])
-        x0 = x + max(0, (l - largura) // 2)
-        for i, linha in enumerate(linhas):
+    # ---- coluna da esquerda ---------------------------------------------
+    def esquerda_topo(self, q, t):
+        l = self.c1
+        self.prompt(q, 0, 1, "py pc.py --abertura", t, 0.1, l)
+        altura = max(6, self.meio - 6)
+        arte, linha_texto, (tx, tl) = asas(l - 2, altura, "A U T O M A Ç Ã O   P C")
+        revelado = min(len(arte), int(max(0, t - 0.8) * 14))   # a arte surge linha a linha
+        for i, linha in enumerate(arte[:revelado]):
             for j, c in enumerate(linha):
-                if c != " ":
-                    brilho = (math.sin(t * 4 - j * 0.15) + 1) / 2   # faixa de luz passando
-                    q.escrever(x0 + j, y + 1 + i, c, _misturar(MEDIO, CLARO, brilho))
-        base = y + 8
-        for i, (inicio, texto) in enumerate(p for p in self.passos if p[0] <= t):
-            if base + i >= y + a:
-                break
-            digitado = texto[: int((t - inicio) * 80)]
-            q.escrever(x + 2, base + i, "> ", FORTE)
-            q.escrever(x + 4, base + i, digitado[: l - 5], BRANCO if texto == "bem-vindo." else CLARO)
+                if c == " ":
+                    continue
+                if i == linha_texto and tx <= j < tx + tl:
+                    q.escrever(1 + j, 3 + i, c, BRANCO)
+                else:
+                    brilho = (math.sin(t * 3 - j * 0.12 + i * 0.3) + 1) / 2
+                    q.escrever(1 + j, 3 + i, c, _misturar(MEDIO, VIVO, brilho))
+        if t > 2.0:
+            texto = "Iniciando módulos..."[: int((t - 2.0) * 25)]
+            q.escrever(0, self.meio - 2, texto + ("█" if int(t * 3) % 2 else " "), ROSA, ate=l)
 
-    def sistema(self, q, t):
-        x, y, l, a = self.p_sistema.dentro
+    def esquerda_htop(self, q, t):
+        l, y0 = self.c1, self.meio
         info = self.info
-        largura = max(8, min(36, l - 26))
-        enchendo = min(1.0, t / 2.5)   # as barras sobem até o valor real
-        linha = y
-        if info["memoria_total"]:
-            uso = info["memoria_usada"] / info["memoria_total"] * enchendo
-            q.escrever(x + 1, linha, "MEM ", CINZA)
-            q.escrever(x + 5, linha, _barra(uso, largura), VIVO)
-            q.escrever(x + 6 + largura, linha,
-                       f"{tamanho_legivel(info['memoria_usada'])} / {tamanho_legivel(info['memoria_total'])}", CINZA)
-            linha += 2
-        for d in info["discos"][: max(0, a - 6)]:
-            uso = (1 - d["livre"] / d["total"]) * enchendo if d["total"] else 0
-            q.escrever(x + 1, linha, f"{d['raiz'][:3]:<4}", CINZA)
-            q.escrever(x + 5, linha, _barra(uso, largura), FORTE if uso < 0.9 else BRANCO)
-            q.escrever(x + 6 + largura, linha, f"{tamanho_legivel(d['livre'])} livres", CINZA)
-            linha += 1
-        linha += 1
-        q.escrever(x + 1, linha, f"{info['nucleos']} núcleos  ·  ligado há {info['ligado']}"[: l - 2], CLARO)
-        onda = "".join("▁▂▃▄▅▆▇█"[int((math.sin(t * 6 + i * 0.5) + 1) * 3.5)] for i in range(max(0, l - 2)))
-        q.escrever(x + 1, min(y + a - 1, linha + 2), onda, MEDIO)
+        metade = l // 2
+        barra_l = max(6, metade - 14)
+        for i, v in enumerate(self.cpu):
+            self.cpu[i] = min(0.95, max(0.03, v + self.rng.uniform(-0.06, 0.06)))
+            q.escrever(1, y0 + i, f"{i + 1:>2} [", TEXTO)
+            q.escrever(5, y0 + i, "|" * int(self.cpu[i] * barra_l), ROSA if self.cpu[i] < 0.6 else VIVO)
+            q.escrever(5 + barra_l, y0 + i, f"{self.cpu[i] * 100:5.1f}%]", TEXTO)
+        linha = y0 + len(self.cpu)
+        total, usada = info["memoria_total"], info["memoria_usada"]
+        enchendo = min(1.0, t / 2)
+        if total:
+            q.escrever(1, linha, "Mem[", TEXTO)
+            q.escrever(5, linha, "|" * int(usada / total * barra_l * enchendo), CLARO)
+            q.escrever(5 + barra_l, linha, f" {usada // 2**20}/{total // 2**20}MB]", TEXTO, ate=metade + 1)
+        if info["discos"]:
+            d = info["discos"][0]
+            uso = 1 - d["livre"] / d["total"] if d["total"] else 0
+            q.escrever(1, linha + 1, "Dsc[", TEXTO)
+            q.escrever(5, linha + 1, "|" * int(uso * barra_l * enchendo), MEDIO)
+            q.escrever(5 + barra_l, linha + 1, f"{uso * 100:5.1f}%]", TEXTO)
+        q.escrever(metade + 2, y0, f"Processos: {len(self.processos)}", TEXTO, ate=l)
+        q.escrever(metade + 2, y0 + 1, f"Agendadas: {sum(1 for x in self.tarefas if x.get('ativo', True))}", TEXTO, ate=l)
+        q.escrever(metade + 2, y0 + 2, f"Ligado há: {info['ligado']}", TEXTO, ate=l)
 
-    def espectro(self, q, t):
-        x, y, l, a = self.p_espectro.dentro
-        colunas = max(1, (l - 5) // 5)
-        n = len(VERMELHOS)
-        for linha in range(a):
-            q.escrever(x, y + linha, f"{linha:>3}", CINZA)
-            for c in range(colunas):
-                i = (c + linha + int(t * 8)) % (2 * n)
-                i = i if i < n else 2 * n - 1 - i
-                q.escrever(x + 4 + c * 5, y + linha, " gYw ", FUNDO if i > 5 else BRANCO, VERMELHOS[i])
-
-    def modulos(self, q, t):
-        x, y, l, a = self.p_modulos.dentro
-        progresso = min(1.0, t / (DURACAO - 0.8))
-        prontos = int(progresso * len(MODULOS))
-        for i, nome in enumerate(MODULOS[:a]):
-            if i < prontos:
-                estado, cor = "[  OK  ]", VIVO
-            elif i == prontos:
-                estado, cor = "[" + "|/-\\"[int(t * 10) % 4].center(6) + "]", BRANCO
+        cab = linha + 3
+        q.escrever(0, cab, "  PID USUÁRIO   CPU%  MEM%   MEMÓRIA  Comando".ljust(l), PRETO, ROSA, ate=l)
+        rodape_y = self.a - 1
+        linhas = max(0, rodape_y - cab - 1)
+        selecionado = int(t * 2.5) % max(1, min(len(self.processos), linhas))
+        for i, (pid, nome, mem) in enumerate(self.processos[:linhas]):
+            pct = mem / total * 100 if total else 0
+            cpu = abs(math.sin(pid + t)) * 4
+            texto = f"{pid:>5} {info['usuario'][:9]:<9} {cpu:4.1f}  {pct:4.1f} {tamanho_legivel(mem):>9}  {nome}"
+            if i == selecionado:
+                q.escrever(0, cab + 1 + i, texto.ljust(l), PRETO, CLARO, ate=l)
             else:
-                estado, cor = "[      ]", ESCURO
-            pontos = "." * max(1, l - len(nome) - 14)
-            q.escrever(x + 1, y + i, f"{i + 1:02} {nome} {pontos} ", CINZA if i > prontos else CLARO)
-            q.escrever(x + l - 9, y + i, estado, cor)
+                q.escrever(0, cab + 1 + i, texto, ROSA if i == 0 else TEXTO, ate=l)
+        x = 0
+        for tecla, rotulo in (("F1", "Ajuda "), ("F2", "Setup "), ("F3", "Busca "), ("F4", "Filtro"),
+                              ("F5", "Árvore"), ("F6", "Ordem "), ("F9", "Parar "), ("F10", "Sair  ")):
+            q.escrever(x, rodape_y, tecla, BRANCO, PRETO, ate=l)
+            q.escrever(x + len(tecla), rodape_y, rotulo, PRETO, ROSA, ate=l)
+            x += len(tecla) + len(rotulo)
 
-    def circuito(self, q, t):
-        x, y, l, a = self.p_circuito.dentro
-        if not self.pontas:
-            self.pontas = [[self.rng.randrange(l), self.rng.randrange(a), self.rng.randrange(4)]
-                           for _ in range(6)]
-        for p in self.pontas:
+    # ---- coluna do meio ---------------------------------------------------
+    def caixa(self, q, x, y, l, a, titulo, linhas, t):
+        q.escrever(x, y, ".-" + "=" * (l - 4) + "-.", ROSA)
+        for i in range(1, a - 1):
+            q.escrever(x, y + i, ":", ROSA)
+            q.escrever(x + l - 1, y + i, ":", ROSA)
+        q.escrever(x, y + a - 1, "'-" + "=" * (l - 4) + "-'", ROSA)
+        q.escrever(x + 1, y + 1, titulo.center(l - 2), BRANCO if int(t * 2) % 4 else VIVO)
+        for i, linha in enumerate(linhas[: max(0, a - 3)]):
+            q.escrever(x + 1, y + 2 + i, linha.center(l - 2)[: l - 2], FORTE)
+
+    def meio_topo(self, q, t):
+        x0, l = self.c1 + 1, self.c2 - self.c1 - 1
+        q.escrever(x0, 1, ("- " * l)[:l], CINZA)
+        alt = max(8, self.meio - 9)
+        lado = max(12, l // 5)
+        centro_l = l - 2 * lado - 2
+        if centro_l >= 14:
+            revelado = int(max(0, t - 0.4) * 10)
+            for i, linha in enumerate(cadeado(centro_l, alt)[:revelado]):
+                for j, c in enumerate(linha):
+                    cor = CINZA if c == ":" else _misturar(MEDIO, CLARO, (math.sin(t * 2 + i * 0.4) + 1) / 2)
+                    q.escrever(x0 + lado + 1 + j, 2 + i, c, cor)
+        meia = alt // 2
+        discos = [d["raiz"].rstrip("\\")[:3] for d in self.info["discos"][:3]]
+        self.caixa(q, x0, 2, lado, meia, ":COFRE", ["AES-256", "GCM"], t)
+        self.caixa(q, x0, 2 + meia, lado, alt - meia, ":DISCOS", discos, t)
+        self.caixa(q, x0 + l - lado, 2, lado, meia, ":CHAVE", ["scrypt", "N=2^17"], t)
+        self.caixa(q, x0 + l - lado, 2 + meia, lado, alt - meia, ":LOCAL", ["127 0 0 1"], t)
+
+        y = 2 + alt
+        q.escrever(x0, y, ("- " * l)[:l], CINZA)
+        pisca = int(t * 3) % 2
+        for i, (a, b, c) in enumerate([
+            ("*AVISO* ", '"Painel de controle local do seu PC"', ""),
+            ("==  ", "Você está no comando. Tudo pode ser desfeito", "  =="),
+            ("Registros: ", "logs/", "  ·  desfazer: py pc.py desfazer"),
+        ]):
+            xx = x0 + max(0, (l - len(a + b + c)) // 2)
+            q.escrever(xx, y + 1 + i, a, BRANCO if (pisca and i == 0) else VIVO, ate=x0 + l)
+            q.escrever(xx + len(a), y + 1 + i, b, BRANCO if i == 1 else ROSA, ate=x0 + l)
+            q.escrever(xx + len(a) + len(b), y + 1 + i, c, VIVO, ate=x0 + l)
+
+    def meio_cores(self, q, t):
+        """A clássica tabela de teste de cores do terminal, em vermelhos."""
+        x0, l = self.c1 + 1, self.c2 - self.c1 - 1
+        y0 = self.meio + 1
+        rotulos = ["m", "1m"] + [r for n in range(30, 38) for r in (f"{n}m", f"1;{n}m")]
+        fundos = [FUNDO_ESCURO, (60, 60, 64)] + VERMELHOS[1:]
+        frente = [TEXTO, BRANCO, PRETO, CINZA, ESCURO, MEDIO, FORTE, VIVO, ROSA, CLARO]
+        larg = max(5, min(7, (l - 7) // len(fundos)))
+        nomes = [""] + [f"{40 + i}m" for i in range(len(fundos) - 1)]
+        for c, nome in enumerate(nomes):
+            q.escrever(x0 + 7 + c * larg, y0, nome.center(larg), VIVO, ate=x0 + l)
+        disponivel = self.a - 1 - y0 - 8
+        onda = int(t * 6)
+        for r, rotulo in enumerate(rotulos[: max(0, disponivel)]):
+            q.escrever(x0, y0 + 1 + r, f"{rotulo:>6}", TEXTO, ate=x0 + l)
+            for c, fundo in enumerate(fundos):
+                letra = frente[(r // 2 + c + onda) % len(frente)] if r > 1 else TEXTO
+                q.escrever(x0 + 7 + c * larg, y0 + 1 + r, "gYw".center(larg), letra, fundo, ate=x0 + l)
+
+    def meio_tanques(self, q, t):
+        x0, l = self.c1 + 1, self.c2 - self.c1 - 1
+        y0 = self.a - 8
+        self.prompt(q, x0, y0 - 2, "./sprites.sh", t, 1.5, x0 + l)
+        tons = VERMELHOS[2:8]
+        passo = max(11, l // 6)
+        aparece = int(max(0, t - 2.2) * 8)
+        n = 0
+        for linha in range(2):
+            for coluna in range(min(6, l // passo)):
+                if n >= aparece:
+                    return
+                cor = tons[(coluna + linha * 2 + int(t * 2)) % len(tons)]
+                for i, parte in enumerate(TANQUE):
+                    q.escrever(x0 + coluna * passo, y0 + linha * 4 + i, parte, cor, ate=x0 + l)
+                n += 1
+
+    # ---- coluna da direita ------------------------------------------------
+    def direita_fila(self, q, t):
+        x0, l = self.c2 + 1, self.l - self.c2 - 1
+        itens = self.tarefas or [{"nome": "nenhuma tarefa agendada", "quando": "-"}]
+        q.escrever(x0, 1, f"Fila de tarefas ({len(itens)} itens)", TEXTO, ate=self.l - 13)
+        q.escrever(self.l - 12, 1, "Volume: 50%", BRANCO)
+        q.escrever(x0, 2, "─" * l, CINZA)
+        alt = max(3, self.y_canos - 6)
+        for i, item in enumerate(itens[:alt]):
+            ativo = item.get("ativo", True)
+            q.escrever(x0, 3 + i, f"{i + 1:02} ", TEXTO)
+            q.escrever(x0 + 3, 3 + i, "│ ", CINZA)
+            q.escrever(x0 + 5, 3 + i, item["nome"], ROSA if ativo else CINZA, ate=x0 + int(l * 0.62))
+            quando = f"[{item.get('quando', '')}{' ' + item['hora'] if item.get('hora') else ''}]"
+            q.escrever(x0 + int(l * 0.64), 3 + i, quando, FORTE if ativo else CINZA, ate=self.l)
+        y = self.y_canos - 3
+        q.escrever(x0, y, "─" * l, CINZA)
+        progresso = min(1.0, t / DURACAO)
+        texto = f"Tocando: abertura // {time.strftime('%Y')} // AUTOMAÇÃO PC // [0:{int(t):02}/0:{int(DURACAO):02}]"
+        q.escrever(x0, y + 1, texto, BRANCO, ate=self.l)
+        cheio = int(progresso * l)
+        q.escrever(x0, y + 2, "━" * cheio, VIVO)
+        q.escrever(x0 + cheio, y + 2, "─" * (l - cheio), CINZA, ate=self.l)
+
+    def direita_canos(self, q, t):
+        """Protetor de tela "canos": canos coloridos crescendo e virando esquinas."""
+        x0, l = self.c2 + 1, self.l - self.c2 - 1
+        y0, a = self.y_canos, self.a_canos
+        cores = [VIVO, FORTE, BRANCO, CINZA, ROSA, MEDIO]
+        if len(self.ocupado) > l * a * 0.55:
+            self.ocupado.clear()
+            self.canos.clear()
+        while len(self.canos) < 5:
+            self.canos.append({"x": self.rng.randrange(l), "y": self.rng.randrange(a),
+                               "dir": self.rng.randrange(4), "cor": self.rng.choice(cores)})
+        retos = {0: "━", 2: "━", 1: "┃", 3: "┃"}
+        curvas = {(0, 1): "┓", (0, 3): "┛", (2, 1): "┏", (2, 3): "┗",
+                  (1, 0): "┗", (1, 2): "┛", (3, 0): "┏", (3, 2): "┓"}
+        for cano in self.canos:
             for _ in range(2):
-                if self.rng.random() < 0.25:
-                    p[2] = (p[2] + self.rng.choice((1, 3))) % 4
-                dx, dy = ((1, 0), (0, 1), (-1, 0), (0, -1))[p[2]]
-                p[0], p[1] = (p[0] + dx) % l, (p[1] + dy) % a
-                self.trilhas[(p[0], p[1])] = ("─" if dx else "│", t)
-        self.trilhas = {k: v for k, v in self.trilhas.items() if t - v[1] < 3}   # rastro antigo some
-        for (cx, cy), (c, quando) in self.trilhas.items():
-            idade = t - quando
-            q.escrever(x + cx, y + cy, c, BRANCO if idade < 0.15 else (VIVO if idade < 1 else MEDIO))
-        for p in self.pontas:
-            q.escrever(x + p[0], y + p[1], "■", BRANCO)
+                antiga = cano["dir"]
+                if self.rng.random() < 0.18:
+                    cano["dir"] = (antiga + self.rng.choice((1, 3))) % 4
+                dx, dy = ((1, 0), (0, 1), (-1, 0), (0, -1))[cano["dir"]]
+                char = retos[cano["dir"]] if antiga == cano["dir"] else curvas[(antiga, cano["dir"])]
+                self.ocupado[(cano["x"], cano["y"])] = (char, cano["cor"])
+                cano["x"] += dx
+                cano["y"] += dy
+                if not (0 <= cano["x"] < l and 0 <= cano["y"] < a):   # saiu da área: nasce outro
+                    cano.update(x=self.rng.randrange(l), y=self.rng.randrange(a),
+                                dir=self.rng.randrange(4), cor=self.rng.choice(cores))
+        for (cx, cy), (char, cor) in self.ocupado.items():
+            q.escrever(x0 + cx, y0 + cy, char, cor)
 
-    def matriz(self, q, t):
-        x, y, l, a = self.p_matriz.dentro
-        simbolos = "0123456789ABCDEF<>{}[]=+*#$%&@/\\|:;"
-        if self.rng.random() < 0.9:
-            self.gotas.append([self.rng.randrange(l), 0.0, self.rng.uniform(0.4, 1.2)])
+    def direita_matriz(self, q, t):
+        x0, l = self.c2 + 1, self.l - self.c2 - 1
+        y0 = self.y_canos + self.a_canos + 1
+        a = self.a - y0
+        if a <= 0:
+            return
+        simbolos = "0123456789ABCDEFabcdef<>{}[]=+*#$%&@/\\|:;?!^~"
+        if self.rng.random() < 0.95:
+            self.gotas.append([self.rng.randrange(0, l, 2), 0.0, self.rng.uniform(0.3, 0.9)])
         vivas = []
         for g in self.gotas:
             g[1] += g[2]
-            for k in range(8):
+            for k in range(10):
                 gy = int(g[1]) - k
                 if 0 <= gy < a:
-                    cor = BRANCO if k == 0 else _misturar(VIVO, ESCURO, k / 8)
-                    q.escrever(x + g[0], y + gy, self.rng.choice(simbolos), cor)
-            if g[1] - 8 < a:
+                    cor = BRANCO if k == 0 else _misturar(VIVO, (70, 52, 58), k / 10)
+                    q.escrever(x0 + g[0], y0 + gy, self.rng.choice(simbolos), cor)
+            if g[1] - 10 < a:
                 vivas.append(g)
         self.gotas = vivas
 
-    # ---- quadro completo -------------------------------------------------
+    # ---- tudo junto ------------------------------------------------------
     def quadro(self, t):
         q = Quadro(self.l, self.a)
-        abas = [" automacao_pc ", " cofre ", " sistema "]
         x = 0
-        for i, aba in enumerate(abas):
-            q.escrever(x, 0, aba, FUNDO if i == 0 else CINZA, VIVO if i == 0 else ESCURO)
-            x += len(aba) + 1
-        relogio = time.strftime(" %d/%m/%Y  %H:%M:%S ")
-        q.escrever(self.l - len(relogio), 0, relogio, BRANCO, ESCURO)
+        for i in range(5):                      # barra de abas do tmux
+            aba = f" {self.usuario[:18]} "
+            ativa = i == int(t / 1.3) % 5
+            q.escrever(x, 0, aba, PRETO if ativa else CINZA, ROSA if ativa else FUNDO_ESCURO)
+            x += len(aba)
+        q.pintar_fundo(x, 0, self.l - x, 1, FUNDO_ESCURO)
+        relogio = time.strftime(" %d/%m/%y %H:%M ")
+        q.escrever(self.l - len(relogio), 0, relogio, BRANCO, FUNDO_ESCURO)
+        for coluna in (self.c1, self.c2):       # divisões entre as colunas
+            q.pintar_fundo(coluna, 1, 1, self.a - 1, FUNDO_ESCURO)
 
-        destaque = int(t * 1.5) % len(self.paineis)
-        for i, p in enumerate(self.paineis):
-            p.moldura(q, i == destaque)
-        self.logo(q, t)
-        self.sistema(q, t)
-        self.espectro(q, t)
-        self.modulos(q, t)
-        self.circuito(q, t)
-        self.matriz(q, t)
+        self.esquerda_topo(q, t)
+        self.esquerda_htop(q, t)
+        self.meio_topo(q, t)
+        self.meio_cores(q, t)
+        self.meio_tanques(q, t)
+        self.direita_fila(q, t)
+        self.direita_canos(q, t)
+        self.direita_matriz(q, t)
 
-        progresso = min(1.0, t / DURACAO)
-        largura = max(10, self.l - 52)
-        rodape = f" INICIANDO [{_barra(progresso, largura)}] {progresso:4.0%}   qualquer tecla pula "
-        q.escrever(0, self.a - 1, rodape.ljust(self.l), CLARO, ESCURO)
-
-        if t >= DURACAO:   # selo final
+        if t >= DURACAO:
             texto = "  S I S T E M A   P R O N T O  "
             cx, cy = (self.l - len(texto)) // 2, self.a // 2
             cor = BRANCO if int(t * 6) % 2 else VIVO
-            q.escrever(cx - 2, cy - 1, "╔" + "═" * (len(texto) + 2) + "╗", cor)
-            q.escrever(cx - 2, cy, "║ " + texto + " ║", FUNDO, cor)
-            q.escrever(cx - 2, cy + 1, "╚" + "═" * (len(texto) + 2) + "╝", cor)
+            q.escrever(cx - 2, cy - 1, "╔" + "═" * (len(texto) + 2) + "╗", cor, PRETO)
+            q.escrever(cx - 2, cy, "║ " + texto + " ║", PRETO, cor)
+            q.escrever(cx - 2, cy + 1, "╚" + "═" * (len(texto) + 2) + "╝", cor, PRETO)
         return q
 
 
-def executar():
+def executar(tarefas=()):
     """Mostra a abertura. Não faz nada se não houver um terminal de verdade."""
     if sys.stdout is None or not sys.stdout.isatty() or sys.stdin is None or not sys.stdin.isatty():
         return
@@ -350,9 +519,9 @@ def executar():
         except OSError:
             pass
     colunas, linhas = shutil.get_terminal_size((120, 36))
-    if colunas < 80 or linhas < 24:
+    if colunas < 120 or linhas < 34:
         return   # janela pequena demais para o efeito
-    abertura = Abertura(colunas - 1, linhas, info_sistema())
+    abertura = Abertura(colunas - 1, linhas, info_sistema(), tarefas, processos_detalhados())
 
     sys.stdout.write("\x1b[?1049h\x1b[?25l")   # tela alternativa, sem cursor
     inicio = time.time()
@@ -363,8 +532,8 @@ def executar():
                 t = time.time() - inicio
                 quadro = abertura.quadro(t)
                 sys.stdout.write(quadro.ansi(anterior))
-                anterior = quadro
                 sys.stdout.flush()
+                anterior = quadro
                 if t > DURACAO + 0.9 or teclado.apertou():
                     break
                 time.sleep(max(0.0, 1 / QPS - (time.time() - inicio - t)))

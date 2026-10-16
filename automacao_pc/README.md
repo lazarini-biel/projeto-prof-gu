@@ -21,7 +21,8 @@ Duas coisas para o seu Windows 11:
 
 ## 2. A central (`pc.py`)
 
-Dê dois cliques em **`AutomacaoPC.bat`**. Abre um menu numerado, e esse é o jeito mais fácil.
+Dê dois cliques em **`AutomacaoPC.bat`**. Ele abre em **tela cheia** no Windows Terminal, mostra uma abertura animada (painéis estilo tmux com dados reais do PC; qualquer tecla pula) e depois o menu numerado. Esse é o jeito mais fácil.
+Para desligar a abertura: `"abertura": false` no `config.json`.
 Na primeira vez ele cria o `config.json`. **Abra esse arquivo no Bloco de Notas e ajuste para o seu PC** (pastas, discos, programas).
 
 > Tudo que mexe em arquivos mostra primeiro uma **prévia** e só aplica com `--executar` (ou quando você responde "s" no menu).
@@ -124,7 +125,9 @@ Mensagens de qualquer ID fora da lista são ignoradas. Comandos enviados com o P
 ```
 Dois cliques em cofre/Cofre.bat        (ou: py cofre/cofre.py)
 ```
+Abre em **tela cheia** com uma abertura animada: janelas de terminal digitando o próprio código do cofre. Qualquer tecla ou clique pula. Depois aparece o painel de login.
 Na primeira vez ele pede para você **criar a senha mestra**, depois sempre pede para desbloquear.
+**F11** alterna tela cheia/janela, e o **✕** no canto fecha. Opções: `py cofre/cofre.py --sem-abertura --janela`.
 
 ### Levar no pendrive
 1. Dê dois cliques em **`cofre/gerar_exe.bat`**. Ele gera `cofre/dist/Cofre.exe`, um arquivo só.

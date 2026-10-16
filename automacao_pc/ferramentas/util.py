@@ -140,3 +140,28 @@ def info_sistema():
         "ligado": ligado,
         "discos": [{"raiz": r, "nome": n, "total": t, "livre": l} for r, n, _, t, l in unidades()],
     }
+
+
+def processos_detalhados(limite=40):
+    """[(pid, nome, memória em bytes)] dos processos em execução, maiores primeiro."""
+    lista = []
+    try:
+        if WINDOWS:
+            saida = subprocess.run(
+                ["tasklist", "/fo", "csv", "/nh"], capture_output=True, encoding="oem",
+                errors="replace", creationflags=subprocess.CREATE_NO_WINDOW).stdout
+            for linha in saida.splitlines():
+                campos = [c.strip('"') for c in linha.split('","')]
+                if len(campos) >= 5 and campos[1].isdigit():
+                    memoria = int("".join(ch for ch in campos[4] if ch.isdigit()) or 0) * 1024
+                    lista.append((int(campos[1]), campos[0], memoria))
+        else:
+            saida = subprocess.run(["ps", "-A", "-o", "pid=,rss=,comm="],
+                                   capture_output=True, text=True).stdout
+            for linha in saida.splitlines():
+                partes = linha.split(None, 2)
+                if len(partes) == 3 and partes[0].isdigit():
+                    lista.append((int(partes[0]), partes[2], int(partes[1]) * 1024))
+    except OSError:
+        pass
+    return sorted(lista, key=lambda p: -p[2])[:limite]

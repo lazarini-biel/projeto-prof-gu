@@ -232,7 +232,7 @@ MENU = [
 ]
 def menu(cfg, parser):
     if cfg.get("abertura", True):
-        intro.executar()
+        intro.executar(cfg.get("agendamentos", []))
     while True:
         print("\n╔══════════════════════════════════════╗")
         print("║          A U T O M A Ç Ã O   P C      ║")
