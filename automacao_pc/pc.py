@@ -27,7 +27,8 @@ import sys
 import time
 
 from ferramentas import (agendador, discos, duplicados, energia, inicio, intro, limpeza,
-                         foco, movimentos, notas, organizar, painel_web, rede, remoto, sistema, tema)
+                         foco, inicializacao, movimentos, notas, organizar, painel_web, rede,
+                         remoto, sistema, tema)
 from ferramentas.categorias import montar_mapa
 from ferramentas.util import PASTA_LOGS, caminho, carregar_config
 
@@ -171,6 +172,19 @@ def cmd_rede(cfg, args):
     rede.dispositivos()
 
 
+def cmd_temp(cfg, args):
+    sistema.temperatura_cmd()
+
+
+def cmd_inicializar(cfg, args):
+    if args.acao == "desativar":
+        inicializacao.desativar(args.numero or 0)
+    elif args.acao == "ativar":
+        inicializacao.ativar(args.numero or 0)
+    else:
+        inicializacao.listar()
+
+
 def cmd_foco(cfg, args):
     if args.modo:
         foco.ativar(cfg, args.modo)
@@ -283,6 +297,14 @@ def montar_parser():
     s.add_argument("resto", nargs="*")
     s.set_defaults(func=cmd_notas)
 
+    s = sub.add_parser("temp", help="temperaturas (CPU/GPU/placa, quando disponível)")
+    s.set_defaults(func=cmd_temp)
+
+    s = sub.add_parser("inicializar", help="programas que abrem com o Windows (listar/desativar)")
+    s.add_argument("acao", nargs="?", choices=["listar", "desativar", "ativar"], default="listar")
+    s.add_argument("numero", nargs="?", type=int)
+    s.set_defaults(func=cmd_inicializar)
+
     s = sub.add_parser("foco", help="modos de foco (estudo, jogos, foco, dormir...)")
     s.add_argument("modo", nargs="?")
     s.set_defaults(func=cmd_foco)
@@ -318,7 +340,7 @@ _TITULOS_CMD = {
     "top": "Top processos", "painel": "Painel no navegador", "pastas": "Espaço por pasta",
     "fechar": "Liberar memória", "internet": "Teste de internet", "rede": "Dispositivos na rede",
     "notas": "Lembretes / notas", "foco": "Modos de foco", "atualizar": "Atualizar programas",
-    "downloads": "Downloads antigos",
+    "downloads": "Downloads antigos", "temp": "Temperaturas", "inicializar": "Inicialização",
 }
 
 
@@ -327,7 +349,7 @@ def rodar(cfg, parser, argv, perguntar, topo=True):
     (ou, sem ninguém no teclado, mostra o comando completo para aplicar)."""
     if topo and argv and argv[0] not in (
             "sistema", "top", "fechar", "internet", "rede", "notas",
-            "foco", "atualizar", "downloads"):   # têm cabeçalho próprio
+            "foco", "atualizar", "downloads", "temp", "inicializar"):   # têm cabeçalho próprio
         tema.cabecalho(_TITULOS_CMD.get(argv[0], argv[0]))
         print()
     args = parser.parse_args(argv)
@@ -350,7 +372,9 @@ def _tem_teclado():
 
 MENU = [
     ("Ver informações do PC", ["sistema"]),
+    ("Temperaturas (CPU/GPU)", ["temp"]),
     ("Top processos (quem usa CPU/RAM)", ["top"]),
+    ("Programas que abrem com o Windows", ["inicializar"]),
     ("Liberar memória / fechar programas", ["fechar"]),
     ("Painel do PC no navegador", ["painel"]),
     ("Testar internet", ["internet"]),

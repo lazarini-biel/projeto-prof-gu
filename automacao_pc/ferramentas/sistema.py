@@ -284,3 +284,48 @@ def atualizar(aplicar=False, saida=None):
         tema.saida(tema.cor(f"Erro ao rodar o winget: {erro}", tema.VIVO))
         return
     tema.saida(tema.bom("\nPronto."))
+
+
+def temperaturas():
+    """Lista de (sensor, °C). Vazia se o PC não expõe temperatura ao Windows."""
+    if not WINDOWS:
+        return []
+    temps = []
+    # 1) termozona ACPI (quase sempre existe, mas costuma ser só a placa)
+    out = _powershell("(Get-CimInstance -Namespace root/WMI "
+                      "-ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue)."
+                      "CurrentTemperature")
+    for linha in out.splitlines():
+        linha = linha.strip()
+        if linha.isdigit():
+            c = int(linha) / 10 - 273.15
+            if 10 < c < 120:
+                temps.append(("Placa/ACPI", round(c, 1)))
+    # 2) LibreHardwareMonitor / OpenHardwareMonitor (se estiver aberto): CPU/GPU reais
+    for ns in ("root/LibreHardwareMonitor", "root/OpenHardwareMonitor"):
+        out = _powershell(f"Get-CimInstance -Namespace {ns} -ClassName Sensor "
+                          "-ErrorAction SilentlyContinue | Where-Object {{$_.SensorType -eq 'Temperature'}} "
+                          "| ForEach-Object {{ \"$($_.Name)=$($_.Value)\" }}")
+        for linha in out.splitlines():
+            if "=" in linha:
+                nome, _, val = linha.partition("=")
+                try:
+                    temps.append((nome.strip(), round(float(val), 1)))
+                except ValueError:
+                    continue
+        if temps:
+            break
+    return temps
+
+
+def temperatura_cmd():
+    tema.cabecalho("Temperaturas", "CPU/GPU/placa (quando o PC informa)")
+    temps = temperaturas()
+    if not temps:
+        tema.saida(tema.cor("O Windows não está informando temperaturas detalhadas.", tema.CINZA))
+        tema.saida(tema.cor("Para ver CPU/GPU com precisão, abra o LibreHardwareMonitor "
+                            "(gratuito) e rode este comando de novo.", tema.CINZA))
+        return
+    for sensor, c in temps:
+        tema.saida(f"  {tema.cor(f'{sensor[:26]:<26}', tema.CINZA)} "
+                   f"{tema.barra(min(1.0, c / 100), 20, aviso=c >= 80)} {tema.realce(f'{c:.0f}°C')}")

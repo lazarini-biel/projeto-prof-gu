@@ -14,6 +14,7 @@ Configuração (uma vez):
 
 import json
 import platform
+import re
 import socket
 import time
 import urllib.error
@@ -21,6 +22,10 @@ import urllib.request
 
 from . import discos, energia, limpeza
 from .util import tamanho_legivel, tempo_ligado
+
+def _sem_ansi(t):
+    return re.sub(r"\x1b\\[[0-9;]*m", "", t)
+
 
 AJUDA = """Comandos:
 /status — como está o PC
@@ -30,12 +35,17 @@ AJUDA = """Comandos:
 /hibernar — hiberna agora
 /bloquear — bloqueia a tela
 /limpar — limpa temporários e caches
-/discos — espaço livre"""
+/discos — espaço livre
+/top — processos que mais usam CPU/RAM
+/ip — IP local
+/sistema — resumo do PC"""
 
 MENU = [("status", "Como está o PC"), ("desligar", "Desliga (minutos opcional)"),
         ("reiniciar", "Reinicia (minutos opcional)"), ("cancelar", "Cancela desligar/reiniciar"),
         ("hibernar", "Hiberna agora"), ("bloquear", "Bloqueia a tela"),
-        ("limpar", "Limpa temporários e caches"), ("discos", "Espaço livre nos discos")]
+        ("limpar", "Limpa temporários e caches"), ("discos", "Espaço livre nos discos"),
+        ("top", "Processos que mais usam CPU/RAM"), ("ip", "IP local"),
+        ("sistema", "Resumo do PC")]
 
 
 def _minutos(args, padrao=1):
@@ -102,11 +112,29 @@ class Bot:
             limpeza.executar(aplicar=True, saida=linhas.append,
                              idade_horas=self.cfg_limpeza.get("idade_minima_horas", 24),
                              navegadores=self.cfg_limpeza.get("navegadores", True))
-            return "🧹 " + "\n".join(linhas)
+            return "🧹 " + _sem_ansi("\n".join(linhas))
         if nome == "discos":
             linhas = []
             discos.relatorio(saida=linhas.append)
-            return "\n".join(linhas)
+            return _sem_ansi("\n".join(linhas))
+        if nome == "ip":
+            from . import sistema
+            return f"🌐 IP local: {sistema.ip_local()}"
+        if nome in ("top", "processos", "ram"):
+            from .util import processos_detalhados, memoria, cpu_percent
+            total, usada = memoria()
+            linhas = [f"🧠 CPU {cpu_percent():.0f}%  ·  RAM "
+                      f"{tamanho_legivel(usada)}/{tamanho_legivel(total)} "
+                      f"({usada / total * 100:.0f}%)" if total else "", ""]
+            for pid, nm, m in processos_detalhados(8):
+                linhas.append(f"{nm[:20]:<20} {tamanho_legivel(m)}")
+            return "\n".join(l for l in linhas if l is not None)
+        if nome == "sistema":
+            from . import sistema
+            i = sistema.coletar()
+            return (f"🖥 {i['maquina']}\n{i['so']}\n{i['cpu']} · {i['nucleos']} núcleos\n"
+                    f"GPU: {i['gpu']}\nRAM: {tamanho_legivel(i['mem_usada'])}/"
+                    f"{tamanho_legivel(i['mem_total'])}\nLigado há {i['ligado']}\nIP {i['ip']}")
         return f"Não conheço /{nome}.\n\n{AJUDA}"
 
     def tratar(self, update):

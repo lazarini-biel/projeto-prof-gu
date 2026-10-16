@@ -34,6 +34,20 @@ Na primeira vez ele cria o `config.json`. **Abra esse arquivo no Bloco de Notas 
 > Tudo que mexe em arquivos mostra primeiro uma **prévia** e só aplica com `--executar` (ou quando você responde "s" no menu).
 > Movimentações podem ser desfeitas com `py pc.py desfazer`.
 
+### Temperaturas
+```
+py pc.py temp
+```
+Mostra CPU/GPU/placa quando o Windows informa. Para temperaturas detalhadas, deixe o **LibreHardwareMonitor** (gratuito) aberto.
+
+### Programas que abrem com o Windows
+```
+py pc.py inicializar                 lista o que abre no logon
+py pc.py inicializar desativar 3     desativa o item 3 (dá para reativar)
+py pc.py inicializar ativar 1
+```
+Desativar guarda um backup, então nada é perdido. Itens "[HKLM]" (de todos os usuários) exigem rodar como administrador.
+
 ### Modos de foco
 ```
 py pc.py foco            lista os modos
@@ -190,7 +204,7 @@ Desligue, reinicie, bloqueie ou veja o estado do PC de qualquer lugar. Não prec
 4. Coloque esse número em `ids_autorizados` (ex.: `"ids_autorizados": [123456789]`) e rode de novo.
 5. Para ficar sempre ligado: em `agendamentos`, ative `"Controle remoto Telegram"` e rode `py pc.py agendar instalar`.
 
-Comandos: `/status`, `/desligar [min]`, `/reiniciar [min]`, `/cancelar`, `/hibernar`, `/bloquear`, `/limpar`, `/discos`.
+Comandos: `/status`, `/desligar [min]`, `/reiniciar [min]`, `/cancelar`, `/hibernar`, `/bloquear`, `/limpar`, `/discos`, `/top`, `/ip`, `/sistema`.
 Mensagens de qualquer ID fora da lista são ignoradas. Comandos enviados com o PC desligado são descartados, para um `/desligar` antigo não desligar o PC assim que ele ligar.
 
 > **Ligar** o PC remotamente não dá por aqui: desligado, ele não recebe mensagens. Para isso existe o *Wake-on-LAN*, que depende da placa-mãe e do roteador.
