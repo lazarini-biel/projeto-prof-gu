@@ -15,7 +15,7 @@ janela de verdade no Windows. Texto só com tema da SPARTA, nada de fora.
 
 import random
 
-from .arte_sparta import elmo, palavra_sparta
+from .arte_sparta import cartaz
 
 # Paleta vermelha (igual à de intro.py)
 FUNDO = (10, 10, 13)
@@ -175,24 +175,16 @@ class Tempestade:
     # ---- janelas de logo (quebra-cabeça do elmo) ------------------------
     def _montar_logos(self):
         """Grade de janelas cobrindo o centro; cada uma recebe sua fatia do elmo."""
-        cols, linhas = 4, 3
-        area_l = min(self.l - 8, max(60, int(self.l * 0.56)))
-        area_a = min(self.a - 6, max(22, int(self.a * 0.72)))
+        cols, linhas = 4, 4
+        # área mais alta para o elmo caber bem (caractere é ~2x mais alto que largo)
+        area_a = min(self.a - 4, max(26, int(self.a * 0.84)))
+        area_l = min(self.l - 8, max(48, area_a * 2))
         x0 = (self.l - area_l) // 2
         y0 = (self.a - area_a) // 2
         # interior útil total (descontando bordas de cada janela: 2 col, 2 lin)
         int_l = area_l - cols * 2
         int_a = area_a - linhas * 2
-        mascara = elmo(int_l, int_a)
-        # grava a palavra SPARTA na base da máscara
-        palavra = palavra_sparta()
-        pl = len(palavra[0])
-        px = (int_l - pl) // 2
-        py = int_a - len(palavra) - 1
-        for i, linha in enumerate(palavra):
-            for j, c in enumerate(linha):
-                if c != " " and 0 <= py + i < int_a and 0 <= px + j < int_l:
-                    mascara[py + i][px + j] = 1.5     # 1.5 = letra da palavra SPARTA
+        mascara = cartaz(int_l, int_a)        # elmo proporcionado + SPARTA
 
         janelas = []
         ordem = [(lc, ll) for ll in range(linhas) for lc in range(cols)]

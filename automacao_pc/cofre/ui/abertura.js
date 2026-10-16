@@ -25,19 +25,23 @@
   };
   function intensidade(x, y) {
     const ax = Math.abs(x);
-    if (y < 0.20) {
-      const d = 0.12 * Math.sin((0.20 - y) * 6);
-      if (Math.abs(x - d) < 0.11 + y * 0.25) return 1.0;
+    if (y < 0.30) {                                   // crista
+      const w = 0.24 * Math.sin(Math.PI * (y / 0.30)) ** 0.65;
+      if (ax < Math.max(w, 0.028)) return 1.0;
     }
-    const dome = (x / 0.70) ** 2 + ((y - 0.46) / 0.42) ** 2;
-    const naCupula = dome <= 1.0 && y >= 0.14 && y <= 0.5;
-    if (y >= 0.42 && y <= 1.0) {
-      const ext = 0.72 - 0.30 * (y - 0.42), intr = 0.34 - 0.06 * (y - 0.42);
-      if (ax >= intr && ax <= ext) return 1.0;
+    if (y >= 0.22 && y <= 0.32 && ax < 0.13) return 1.0;
+    if ((x / 0.66) ** 2 + ((y - 0.52) / 0.30) ** 2 <= 1.0 && y >= 0.26 && y <= 0.56) return 1.0;
+    if (y >= 0.50 && y <= 0.575 && ax < 0.52) return 1.0;
+    if (y >= 0.50 && y <= 1.0) {                       // bochechas
+      const f = (y - 0.50) / 0.50;
+      if (ax >= 0.46 - 0.30 * f && ax <= 0.62 - 0.46 * f) return 1.0;
     }
-    if (y >= 0.44 && y <= 0.96 && ax < 0.085) return 1.0;
-    if (y >= 0.40 && y <= 0.50 && ax < 0.52) return 1.0;
-    return naCupula ? 1.0 : 0.0;
+    if (y >= 0.52 && y <= 0.90 && ax < 0.055) return 1.0;   // nariz
+    if (y >= 0.56 && y <= 0.70) {                      // sobrancelha brava
+      const t = (y - 0.56) / 0.14;
+      if (ax > 0.055 && ax < 0.055 + 0.30 * (1 - t)) return 1.0;
+    }
+    return 0.0;
   }
   function elmoMascara(w, h) {
     const g = [];
@@ -53,14 +57,26 @@
         ([dy, dx]) => !(orig[y + dy] && orig[y + dy][x + dx] > 0));
       g[y][x] = borda ? 1.0 : 0.72;
     }
-    const palavra = "SPARTA".split("").map((c) => _FONTE[c]);
-    const linhas = 5, largura = palavra.reduce((s, l) => s + l[0].length + 2, -2);
-    const px = Math.floor((w - largura) / 2), py = h - linhas - 1;
-    palavra.forEach((letra, li) => {
-      let off = 0;
-      for (let k = 0; k < li; k++) off += palavra[k][0].length + 2;
-      for (let r = 0; r < 5; r++) for (let c = 0; c < letra[r].length; c++)
-        if (letra[r][c] !== " " && g[py + r] && px + off + c < w) g[py + r][px + off + c] = 1.5;
+    return g;
+  }
+  function palavraLinhas() {
+    return [0, 1, 2, 3, 4].map((i) => "SPARTA".split("").map((c) => _FONTE[c][i]).join("  "));
+  }
+  function cartaz(cols, rows) {
+    const g = Array.from({ length: rows }, () => new Array(cols).fill(0));
+    const palavra = palavraLinhas(), espaco = palavra.length + 1;
+    let hb = Math.max(8, Math.min(rows - espaco, Math.floor(cols / 2)));
+    let wb = Math.min(cols, hb * 2);
+    hb = Math.min(hb, Math.floor(wb / 2));
+    if (hb < 6) return g;
+    const m = elmoMascara(wb, hb);
+    const ox = Math.floor((cols - wb) / 2), oy = Math.max(0, Math.floor((rows - hb - espaco) / 2));
+    for (let y = 0; y < hb; y++) for (let x = 0; x < wb; x++)
+      if (oy + y < rows && ox + x < cols) g[oy + y][ox + x] = m[y][x];
+    const pl = palavra[0].length, px = Math.floor((cols - pl) / 2), py = oy + hb + 1;
+    palavra.forEach((linha, i) => {
+      for (let j = 0; j < linha.length; j++)
+        if (linha[j] !== " " && g[py + i] && px + j < cols) g[py + i][px + j] = 1.5;
     });
     return g;
   }
@@ -153,10 +169,10 @@
     return { x: Math.random() * (100 - l), y: 4 + Math.random() * (92 - a), l, a };
   }
   function gradeLogo() {
-    const cols = 5, linhas = 3, areaL = 60, areaA = 66;
+    const cols = 4, linhas = 4, areaL = 46, areaA = 80;
     const x0 = (100 - areaL) / 2, y0 = (100 - areaA) / 2;
-    const cw = 16, ch = 9;                       // chars por janela (interior)
-    const mascara = elmoMascara(cols * cw, linhas * ch);
+    const cw = 15, ch = 8;                       // chars por janela (interior)
+    const mascara = cartaz(cols * cw, linhas * ch);   // elmo proporcionado + SPARTA
     const janelas = [];
     const ordem = [];
     for (let r = 0; r < linhas; r++) for (let c = 0; c < cols; c++) ordem.push([c, r]);
