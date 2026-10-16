@@ -20,18 +20,18 @@ import shutil
 import sys
 import time
 
-from .arte_sparta import elmo, palavra_sparta
+from .arte_sparta import palavra_sparta
 from .popups import Tempestade
 from .util import WINDOWS, info_sistema, processos_detalhados, tamanho_legivel
 
 QPS = 20
-DURACAO = 6.5
+DURACAO = 6.5          # tempo mínimo do painel antes do "SISTEMA PRONTO"
 
-# Paleta: cinza de fundo como no tmux + vermelhos
-FUNDO = (38, 38, 41)
-FUNDO_ESCURO = (28, 28, 30)
-TEXTO = (205, 205, 210)
-CINZA = (120, 120, 128)
+# Paleta: fundo bem escuro + vermelhos
+FUNDO = (12, 10, 12)
+FUNDO_ESCURO = (7, 6, 8)
+TEXTO = (200, 200, 206)
+CINZA = (120, 118, 126)
 BRANCO = (250, 250, 250)
 PRETO = (16, 16, 18)
 VERMELHOS = [(92, 22, 34), (128, 24, 44), (170, 28, 56), (205, 34, 66), (232, 52, 86),
@@ -261,11 +261,12 @@ TANQUE = ["   ▄██▄   ",
 
 # ------------------------------------------------------------------ abertura
 class Abertura:
-    def __init__(self, largura, altura, info, tarefas=(), processos=()):
+    def __init__(self, largura, altura, info, tarefas=(), processos=(), duracao=DURACAO):
         self.l, self.a = largura, altura
         self.info = info
         self.tarefas = list(tarefas)
         self.processos = list(processos)
+        self.duracao = duracao                     # quando aparece "SISTEMA PRONTO"
         self.rng = random.Random()
         self.usuario = f"{info['usuario']}@{info['maquina']}"
         self.cpu = [self.rng.uniform(0.15, 0.5) for _ in range(min(info["nucleos"], 4))]
@@ -534,7 +535,7 @@ class Abertura:
         self.direita_canos(q, t)
         self.direita_matriz(q, t)
 
-        if t >= DURACAO:
+        if t >= self.duracao - 1.4:
             texto = "  S I S T E M A   P R O N T O  "
             cx, cy = (self.l - len(texto)) // 2, self.a // 2
             cor = BRANCO if int(t * 6) % 2 else VIVO
@@ -551,11 +552,28 @@ def _quadro_tempestade(tempestade, t):
     return q
 
 
-def executar(tarefas=(), popups=True):
+def _trazer_terminal_para_frente():
+    """Best-effort: traz a janela do próprio terminal de volta à frente."""
+    if not WINDOWS:
+        return
+    try:
+        import ctypes
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 9)   # SW_RESTORE
+            ctypes.windll.user32.SetForegroundWindow(hwnd)
+    except OSError:
+        pass
+
+
+def executar(tarefas=(), popups=True, cfg=None):
     """Mostra a abertura. Não faz nada se não houver um terminal de verdade.
 
-    Fases: tempestade de pop-ups que monta o elmo da SPARTA, depois o painel
-    (dashboard) e o "SISTEMA PRONTO". Qualquer tecla pula tudo.
+    No Windows (e se ligado no config) abre várias janelas de CMD de verdade
+    que enchem a tela e se fecham sozinhas; por trás roda o painel (dashboard).
+    Fora do Windows, usa a tempestade "fake". Qualquer tecla pula tudo.
+
+    config: abertura_segundos (duração total), cmds_reais (bool), cmds_qtd.
     """
     if sys.stdout is None or not sys.stdout.isatty() or sys.stdin is None or not sys.stdin.isatty():
         return
@@ -568,9 +586,27 @@ def executar(tarefas=(), popups=True):
     if colunas < 120 or linhas < 34:
         return   # janela pequena demais para o efeito
     largura = colunas - 1
-    tempestade = Tempestade(largura, linhas) if popups else None
-    t_storm = tempestade.duracao if tempestade else 0.0
-    abertura = Abertura(largura, linhas, info_sistema(), tarefas, processos_detalhados())
+    cfg = cfg or {}
+    total = max(6.0, min(float(cfg.get("abertura_segundos", 24)), 180.0))
+
+    # tenta abrir CMDs de verdade (Windows); senão, usa a tempestade fake
+    flood = None
+    if WINDOWS and cfg.get("cmds_reais", True):
+        try:
+            from . import cmd_flood
+            flood = cmd_flood.abrir(cfg.get("cmds_qtd", 18), total)
+        except Exception:
+            flood = None
+
+    if flood:
+        tempestade, t_storm, dash_dur = None, 0.0, total
+    else:
+        dur_storm = max(6.0, total * 0.45) if popups else 0.0
+        tempestade = Tempestade(largura, linhas, duracao=dur_storm) if dur_storm else None
+        t_storm = tempestade.duracao if tempestade else 0.0
+        dash_dur = total - t_storm
+    abertura = Abertura(largura, linhas, info_sistema(), tarefas, processos_detalhados(),
+                        duracao=dash_dur)
 
     sys.stdout.write("\x1b[?1049h\x1b[?25l")   # tela alternativa, sem cursor
     inicio = time.time()
@@ -586,14 +622,18 @@ def executar(tarefas=(), popups=True):
                 sys.stdout.write(quadro.ansi(anterior))
                 sys.stdout.flush()
                 anterior = quadro
-                if t - t_storm > DURACAO + 0.9 or teclado.apertou():
+                if t > total or teclado.apertou():
                     break
                 time.sleep(max(0.0, 1 / QPS - (time.time() - inicio - t)))
     except KeyboardInterrupt:
         pass
     finally:
+        if flood:
+            flood.fechar()
         sys.stdout.write("\x1b[0m\x1b[?25h\x1b[?1049l")
         sys.stdout.flush()
+        if flood:
+            _trazer_terminal_para_frente()
 
 
 # ======================================================================
@@ -612,8 +652,6 @@ class _MenuArte:
         self.ph = len(opcoes) + 11
         self.px = (largura - self.pw) // 2
         self.py = max(1, (altura - self.ph) // 2)
-        # marca-d'água do elmo, atrás do painel
-        self.marca = elmo(self.pw + 8, self.ph + 2)
 
     def _chuva(self, q, t):
         simbolos = "0123456789ABCDEF<>{}[]=+*#$%&@/\\|:;"
@@ -635,14 +673,6 @@ class _MenuArte:
             if g[1] - 8 < self.a:
                 vivas.append(g)
         self.gotas = vivas
-
-    def _marca_dagua(self, q, t):
-        x0, y0 = self.px - 4, self.py - 1
-        for ly, linha in enumerate(self.marca):
-            for lx, v in enumerate(linha):
-                if v > 0 and (lx + ly) % 2 == 0:
-                    car = "▓" if v >= 0.9 else "▒"
-                    q.escrever(x0 + lx, y0 + ly, car, _misturar(FUNDO, ESCURO, 0.5))
 
     def _widgets(self, q, t):
         # cantos com "atividade" em vermelho
@@ -704,7 +734,6 @@ class _MenuArte:
         relogio = time.strftime(" %d/%m/%y  %H:%M:%S ")
         q.escrever(self.l - len(relogio), 0, relogio, BRANCO, FUNDO_ESCURO)
         q.escrever(1, 0, " SPARTA // menu ", PRETO, VIVO)
-        self._marca_dagua(q, t)
         self._chuva(q, t)
         self._widgets(q, t)
         self._painel(q, t, selecao)

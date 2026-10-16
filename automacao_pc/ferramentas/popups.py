@@ -15,10 +15,8 @@ janela de verdade no Windows. Texto só com tema da SPARTA, nada de fora.
 
 import random
 
-from .arte_sparta import cartaz
-
 # Paleta vermelha (igual à de intro.py)
-FUNDO = (10, 10, 13)
+FUNDO = (8, 7, 9)
 PRETO = (6, 6, 8)
 CINZA = (120, 120, 128)
 BRANCO = (250, 250, 250)
@@ -131,81 +129,18 @@ class Popup:
             q.escrever(ix + 9, iy + i, "█" * cheio, _mistura(FUNDO, VIVO, a))
             q.escrever(ix + 9 + cheio, iy + i, "░" * (larg - cheio), _mistura(FUNDO, ESCURO, a))
 
-    def _conteudo_logo(self, q, t, a, ix, iy, iw, ih):
-        """Fatia do elmo: células cheias viram caracteres densos em vermelho.
-        Valor >=1.4 é a palavra SPARTA (branco sólido); 0.9+ é borda; o resto, miolo."""
-        self.rng.seed(int(t * 10) + self.dados["semente"])
-        mascara = self.dados["mascara"]        # ih linhas × iw de intensidade
-        montagem = min(1.0, (t - self.nascimento) / 0.8)
-        for linha in range(min(ih, len(mascara))):
-            for col in range(min(iw, len(mascara[linha]))):
-                v = mascara[linha][col]
-                if v <= 0:
-                    if self.rng.random() < 0.05:   # poeirinha no vazio
-                        q.escrever(ix + col, iy + linha, self.rng.choice(".:·'"),
-                                   _mistura(FUNDO, ESCURO, a * 0.5))
-                    continue
-                if self.rng.random() > montagem:
-                    continue                        # ainda "montando" essa célula
-                if v >= 1.4:                         # letra de SPARTA
-                    char, base = "█", BRANCO
-                elif v >= 0.9:                       # borda do elmo
-                    char, base = self.rng.choice("██▓@#"), _mistura(VIVO, CLARO, 0.5)
-                elif self.rng.random() < 0.88:       # miolo metálico
-                    char, base = self.rng.choice("▓▒#%&8B"), _mistura(FORTE, VIVO, v)
-                else:
-                    continue
-                q.escrever(ix + col, iy + linha, char, _mistura(FUNDO, base, a))
-
-
 class Tempestade:
-    """Gerencia a tempestade de pop-ups e a montagem do elmo."""
+    """Tempestade de pop-ups (fake) enchendo a tela. Usada como alternativa
+    quando não dá para abrir CMDs de verdade (fora do Windows ou desligado)."""
 
-    def __init__(self, largura, altura, rng=None, dur_storm=11.0, dur_logo=3.0):
+    def __init__(self, largura, altura, rng=None, duracao=12.0):
         self.l, self.a = largura, altura
         self.rng = rng or random.Random()
-        self.dur_storm = dur_storm                 # enche a tela de pop-ups
-        self.dur_logo = dur_logo                   # segura a logo montada
-        self.duracao = dur_storm + dur_logo
+        self.dur_storm = duracao                   # enche a tela o tempo todo
+        self.duracao = duracao
         self.comuns = []
         self.proximo = 0.0
         self.contador = 0
-        self.logos = self._montar_logos()
-
-    # ---- janelas de logo (quebra-cabeça do elmo) ------------------------
-    def _montar_logos(self):
-        """Grade de janelas cobrindo o centro; cada uma recebe sua fatia do elmo."""
-        cols, linhas = 4, 4
-        # área mais alta para o elmo caber bem (caractere é ~2x mais alto que largo)
-        area_a = min(self.a - 4, max(26, int(self.a * 0.84)))
-        area_l = min(self.l - 8, max(48, area_a * 2))
-        x0 = (self.l - area_l) // 2
-        y0 = (self.a - area_a) // 2
-        # interior útil total (descontando bordas de cada janela: 2 col, 2 lin)
-        int_l = area_l - cols * 2
-        int_a = area_a - linhas * 2
-        mascara = cartaz(int_l, int_a)        # elmo proporcionado + SPARTA
-
-        janelas = []
-        ordem = [(lc, ll) for ll in range(linhas) for lc in range(cols)]
-        self.rng.shuffle(ordem)                    # encaixe em ordem embaralhada
-        passo_x = area_l // cols
-        passo_a = area_a // linhas
-        # offsets acumulados do interior, por coluna/linha
-        off_x = [c * (int_l // cols) for c in range(cols + 1)]
-        off_y = [r * (int_a // linhas) for r in range(linhas + 1)]
-        off_x[cols], off_y[linhas] = int_l, int_a
-        for k, (lc, ll) in enumerate(ordem):
-            jx = x0 + lc * passo_x
-            jy = y0 + ll * passo_a
-            jw = (area_l - (cols - 1) * passo_x) if lc == cols - 1 else passo_x
-            jh = (area_a - (linhas - 1) * passo_a) if ll == linhas - 1 else passo_a
-            fatia = [linha[off_x[lc]:off_x[lc + 1]] for linha in mascara[off_y[ll]:off_y[ll + 1]]]
-            nasce = 2.5 + k * ((self.dur_storm - 3.0) / len(ordem))
-            janelas.append(Popup(jx, jy, max(6, jw), max(4, jh),
-                                 self.rng.choice(TITULOS), "logo", nasce, 999, self.rng,
-                                 {"mascara": fatia, "semente": k * 13}))
-        return janelas
 
     def _nova_comum(self, t):
         self.contador += 1
@@ -222,24 +157,17 @@ class Tempestade:
         return Popup(x, y, w, h, self.rng.choice(TITULOS), tipo, t, vida, self.rng, dados)
 
     def desenhar(self, q, t):
-        # some com as janelas comuns mortas, nasce outra no lugar (sempre cheio)
+        # some com as janelas mortas, nasce outra no lugar (tela sempre cheia)
         self.comuns = [p for p in self.comuns if p.viva(t)]
         if t < self.dur_storm and t >= self.proximo:
             self.comuns.append(self._nova_comum(t))
-            self.proximo = t + self.rng.uniform(0.35, 0.8)
-        # ao fim da tempestade, as comuns somem para o elmo ficar limpo
-        fade = 1.0 if t < self.dur_storm else max(0.0, 1.0 - (t - self.dur_storm) / 1.2)
-        if fade > 0.01:
-            for p in sorted(self.comuns, key=lambda p: p.nascimento):
-                p.desenhar(q, t, fade)
-        # as janelas de logo ficam sempre por cima, montando o elmo
-        for p in self.logos:
+            self.proximo = t + self.rng.uniform(0.3, 0.7)
+        for p in sorted(self.comuns, key=lambda p: p.nascimento):
             p.desenhar(q, t)
         # rodapé
-        if t < self.duracao:
-            prog = min(1.0, t / self.duracao)
-            larg = max(10, self.l - 52)
-            cheio = int(prog * larg)
-            texto = (f" SPARTA // montando ambiente  [{'█' * cheio}{'░' * (larg - cheio)}]"
-                     f" {prog * 100:3.0f}%   qualquer tecla pula ")
-            q.escrever(0, self.a - 1, texto.ljust(self.l), CLARO, PRETO)
+        prog = min(1.0, t / self.duracao) if self.duracao else 1.0
+        larg = max(10, self.l - 52)
+        cheio = int(prog * larg)
+        texto = (f" SPARTA // abrindo terminais  [{'█' * cheio}{'░' * (larg - cheio)}]"
+                 f" {prog * 100:3.0f}%   qualquer tecla pula ")
+        q.escrever(0, self.a - 1, texto.ljust(self.l), CLARO, PRETO)

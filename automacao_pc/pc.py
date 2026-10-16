@@ -232,7 +232,7 @@ MENU = [
 ]
 def menu(cfg, parser):
     if cfg.get("abertura", True):
-        intro.executar(cfg.get("agendamentos", []))
+        intro.executar(cfg.get("agendamentos", []), cfg=cfg)
     rotulos = [rotulo for rotulo, _ in MENU]
     selecao = 0
     while True:
