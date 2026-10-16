@@ -32,7 +32,7 @@ FUNDO = (12, 10, 12)
 FUNDO_ESCURO = (7, 6, 8)
 TEXTO = (200, 200, 206)
 CINZA = (120, 118, 126)
-BRANCO = (250, 250, 250)
+BRANCO = (255, 160, 175)   # "branco" = vermelho bem claro (sem branco puro)
 PRETO = (16, 16, 18)
 VERMELHOS = [(92, 22, 34), (128, 24, 44), (170, 28, 56), (205, 34, 66), (232, 52, 86),
              (245, 92, 122), (250, 140, 165), (252, 190, 205), (255, 228, 234)]
@@ -587,14 +587,15 @@ def executar(tarefas=(), popups=True, cfg=None):
         return   # janela pequena demais para o efeito
     largura = colunas - 1
     cfg = cfg or {}
-    total = max(6.0, min(float(cfg.get("abertura_segundos", 24)), 180.0))
+    total = max(6.0, min(float(cfg.get("abertura_segundos", 16)), 180.0))
 
-    # tenta abrir CMDs de verdade (Windows); senão, usa a tempestade fake
+    # tenta abrir CMDs de verdade (Windows); senão, usa a tempestade fake.
+    # Os CMDs duram só a 1ª parte (~60%): depois somem e aparece o painel.
     flood = None
     if WINDOWS and cfg.get("cmds_reais", True):
         try:
             from . import cmd_flood
-            flood = cmd_flood.abrir(cfg.get("cmds_qtd", 18), total)
+            flood = cmd_flood.abrir(cfg.get("cmds_qtd", 18), min(total * 0.6, 9.0))
         except Exception:
             flood = None
 
