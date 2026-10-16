@@ -112,12 +112,12 @@ function iniciarChuva() {
     requestAnimationFrame(desenhar);
     if (agora - ultimo < 50) return;
     ultimo = agora;
-    ctx.fillStyle = "rgba(3, 7, 11, 0.14)";
+    ctx.fillStyle = "rgba(7, 2, 4, 0.14)";
     ctx.fillRect(0, 0, tela.width, tela.height);
     ctx.font = `${tam - 2}px Consolas, monospace`;
     colunas.forEach((y, i) => {
       const c = chars[(Math.random() * chars.length) | 0];
-      ctx.fillStyle = Math.random() > 0.975 ? "#e8fdff" : "rgba(34, 230, 255, 0.75)";
+      ctx.fillStyle = Math.random() > 0.975 ? "#ffe3e8" : "rgba(255, 51, 85, 0.75)";
       ctx.fillText(c, i * tam, y * tam);
       colunas[i] = y * tam > tela.height && Math.random() > 0.975 ? 0 : y + 1;
     });
@@ -142,6 +142,7 @@ async function iniciar() {
   estado.kdf = st.kdf;
   $("#caminho-cofre").textContent = "ARQUIVO: " + st.caminho;
   if (st.aberto) return entrarNoCofre();
+  if (st.abertura) await window.abertura(await fontesDaAbertura());
 
   estado.criando = !st.existe;
   await digitarLinhas($("#boot"), [
@@ -152,6 +153,18 @@ async function iniciar() {
   ]);
   prepararFormulario();
   if (st.espera > 0) contagemBloqueio(st.espera);
+}
+
+async function fontesDaAbertura() {
+  try {
+    const fontes = await api.codigo_fonte();
+    if (fontes && fontes.length) return fontes;
+  } catch (e) { /* segue para o plano B */ }
+  try {
+    return [{ nome: "app.js", texto: await (await fetch("app.js")).text() }];
+  } catch (e) {
+    return [];
+  }
 }
 
 function prepararFormulario() {
@@ -654,6 +667,11 @@ function ligarEventos() {
   });
 
   $("#escolher-busca").addEventListener("input", desenharEscolhas);
+  $("#bt-tela-cheia").addEventListener("click", () => api && api.alternar_tela_cheia());
+  $("#bt-sair").addEventListener("click", () => api && api.sair());
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "F11" && api) { ev.preventDefault(); api.alternar_tela_cheia(); }
+  });
 
   for (const ev of ["mousemove", "keydown", "click", "wheel"]) document.addEventListener(ev, marcarAtividade, { passive: true });
   document.addEventListener("keydown", (ev) => {

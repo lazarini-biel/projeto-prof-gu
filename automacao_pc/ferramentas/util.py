@@ -2,8 +2,11 @@
 Funções comuns: configuração, formatação de tamanhos e detalhes do Windows.
 """
 
+import getpass
 import json
 import os
+import platform
+import socket
 import shutil
 import subprocess
 import sys
@@ -85,3 +88,55 @@ def arquivo_intocavel(st):
     """True para arquivos de sistema ou que só existem na nuvem (ler baixaria tudo)."""
     atributos = getattr(st, "st_file_attributes", 0)
     return bool(atributos & (_ATRIBUTO_SISTEMA | _ATRIBUTO_OFFLINE | _ATRIBUTO_SO_NA_NUVEM))
+
+
+def tempo_ligado():
+    """Há quanto tempo o PC está ligado, ex.: "2d 3h 15min"."""
+    if WINDOWS:
+        import ctypes
+        ctypes.windll.kernel32.GetTickCount64.restype = ctypes.c_uint64
+        segundos = ctypes.windll.kernel32.GetTickCount64() // 1000
+    else:
+        with open("/proc/uptime") as f:
+            segundos = int(float(f.read().split()[0]))
+    h, m = divmod(segundos // 60, 60)
+    return f"{h // 24}d {h % 24}h {m}min" if h >= 24 else f"{h}h {m}min"
+
+
+def memoria():
+    """(total, usada) em bytes."""
+    try:
+        if WINDOWS:
+            import ctypes
+
+            class MEMORYSTATUSEX(ctypes.Structure):
+                _fields_ = [("dwLength", ctypes.c_uint32), ("dwMemoryLoad", ctypes.c_uint32)] + [
+                    (n, ctypes.c_uint64) for n in ("total", "livre", "a", "b", "c", "d", "e")]
+            m = MEMORYSTATUSEX(dwLength=ctypes.sizeof(MEMORYSTATUSEX))
+            ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(m))
+            return m.total, m.total - m.livre
+        with open("/proc/meminfo") as f:
+            info = {l.split(":")[0]: int(l.split()[1]) * 1024 for l in f}
+        return info["MemTotal"], info["MemTotal"] - info["MemAvailable"]
+    except (OSError, KeyError, ValueError):
+        return 0, 0
+
+
+def info_sistema():
+    """Dados reais do PC para as telas de abertura."""
+    from .discos import unidades
+    total, usada = memoria()
+    try:
+        ligado = tempo_ligado()
+    except OSError:
+        ligado = "?"
+    return {
+        "usuario": getpass.getuser(),
+        "maquina": socket.gethostname(),
+        "sistema": f"{platform.system()} {platform.release()}",
+        "nucleos": os.cpu_count() or 4,
+        "memoria_total": total,
+        "memoria_usada": usada,
+        "ligado": ligado,
+        "discos": [{"raiz": r, "nome": n, "total": t, "livre": l} for r, n, _, t, l in unidades()],
+    }

@@ -20,7 +20,7 @@ import urllib.error
 import urllib.request
 
 from . import discos, energia, limpeza
-from .util import WINDOWS, tamanho_legivel
+from .util import tamanho_legivel, tempo_ligado
 
 AJUDA = """Comandos:
 /status — como está o PC
@@ -36,18 +36,6 @@ MENU = [("status", "Como está o PC"), ("desligar", "Desliga (minutos opcional)"
         ("reiniciar", "Reinicia (minutos opcional)"), ("cancelar", "Cancela desligar/reiniciar"),
         ("hibernar", "Hiberna agora"), ("bloquear", "Bloqueia a tela"),
         ("limpar", "Limpa temporários e caches"), ("discos", "Espaço livre nos discos")]
-
-
-def _tempo_ligado():
-    if WINDOWS:
-        import ctypes
-        ctypes.windll.kernel32.GetTickCount64.restype = ctypes.c_uint64
-        segundos = ctypes.windll.kernel32.GetTickCount64() // 1000
-    else:
-        with open("/proc/uptime") as f:
-            segundos = int(float(f.read().split()[0]))
-    h, m = divmod(segundos // 60, 60)
-    return f"{h // 24}d {h % 24}h {m}min" if h >= 24 else f"{h}h {m}min"
 
 
 def _minutos(args, padrao=1):
@@ -98,7 +86,7 @@ class Bot:
             livres = ", ".join(f"{r.rstrip(chr(92))} {tamanho_legivel(l)} livres"
                                for r, _, _, _, l in discos.unidades())
             return (f"🖥 {socket.gethostname()} ({platform.system()} {platform.release()})\n"
-                    f"⏱ Ligado há {_tempo_ligado()}\n💾 {livres}")
+                    f"⏱ Ligado há {tempo_ligado()}\n💾 {livres}")
         if nome == "desligar":
             return energia.desligar(_minutos(args))[1] + " /cancelar para abortar."
         if nome == "reiniciar":

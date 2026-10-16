@@ -26,7 +26,7 @@ import subprocess
 import sys
 import time
 
-from ferramentas import (agendador, discos, duplicados, energia, inicio, limpeza,
+from ferramentas import (agendador, discos, duplicados, energia, inicio, intro, limpeza,
                          movimentos, organizar, remoto)
 from ferramentas.categorias import montar_mapa
 from ferramentas.util import PASTA_LOGS, caminho, carregar_config
@@ -231,6 +231,8 @@ MENU = [
     ("Desfazer a última movimentação", ["desfazer"]),
 ]
 def menu(cfg, parser):
+    if cfg.get("abertura", True):
+        intro.executar()
     while True:
         print("\n╔══════════════════════════════════════╗")
         print("║          A U T O M A Ç Ã O   P C      ║")

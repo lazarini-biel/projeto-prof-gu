@@ -1,4 +1,6 @@
 {
+  "abertura": true,
+
   "_leia_me": "Este é o modelo. Na 1ª execução ele vira config.json — edite o config.json. Use barras normais (/) nas pastas; %USERPROFILE%, %LOCALAPPDATA% etc. funcionam.",
 
   "organizar": {

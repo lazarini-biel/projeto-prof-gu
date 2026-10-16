@@ -95,6 +95,8 @@ if WINDOWS:
     user32.GetWindowTextW.argtypes = (wintypes.HWND, wintypes.LPWSTR, ctypes.c_int)
     user32.GetWindowThreadProcessId.argtypes = (wintypes.HWND, ctypes.POINTER(wintypes.DWORD))
     user32.SetForegroundWindow.argtypes = (wintypes.HWND,)
+    user32.FindWindowW.argtypes = (wintypes.LPCWSTR, wintypes.LPCWSTR)
+    user32.FindWindowW.restype = wintypes.HWND
     user32.ShowWindow.argtypes = (wintypes.HWND, ctypes.c_int)
     user32.IsIconic.argtypes = (wintypes.HWND,)
     user32.GetAsyncKeyState.argtypes = (ctypes.c_int,)
@@ -163,6 +165,17 @@ def focar(hwnd, espera=1.5):
             return True
         time.sleep(0.05)
     return False
+
+
+def trazer_para_frente(titulo):
+    """Mostra a janela com esse título por cima das outras (desminimizando se preciso)."""
+    _exigir_windows()
+    hwnd = user32.FindWindowW(None, titulo)
+    if not hwnd:
+        return False
+    if user32.IsIconic(hwnd):
+        user32.ShowWindow(hwnd, 9)   # SW_RESTORE volta ao estado anterior (tela cheia inclusa)
+    return bool(user32.SetForegroundWindow(hwnd))
 
 
 # ------------------------------------------------------------ digitação

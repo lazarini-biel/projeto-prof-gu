@@ -4,6 +4,8 @@ COFRE — gerenciador de senhas portátil.
 Rode com:
     python cofre.py                 usa/cria "cofre.dat" ao lado do programa
     python cofre.py E:/meu.dat      usa outro arquivo
+    --sem-abertura                  pula a animação de abertura
+    --janela                        abre em janela em vez de tela cheia (F11 alterna)
 
 Empacotado como Cofre.exe (veja gerar_exe.bat) ele roda direto do pendrive:
 o executável e o cofre.dat ficam juntos, nada é instalado no PC.
@@ -45,8 +47,9 @@ class Api:
     interno fica em atributos com "_".
     """
 
-    def __init__(self, cofre):
+    def __init__(self, cofre, abertura=True):
         self._cofre = cofre
+        self._abertura = abertura
         self._janela = None
         self._trava = threading.RLock()
         self._ultimo_uso = time.time()
@@ -68,17 +71,18 @@ class Api:
                 pass
 
     def _trazer_para_frente(self):
+        # Pela API do Windows: restaurar pelo pywebview tiraria a tela cheia.
+        if autotipo.WINDOWS and autotipo.trazer_para_frente(TITULO):
+            return
         if self._janela:
-            self._janela.restore()
             self._janela.show()
-            self._janela.on_top = True
-            self._janela.on_top = False
 
     # ----------------------------------------------------------- estado
     def estado(self):
         with self._trava:
             return {
                 "existe": self._cofre.existe,
+                "abertura": self._abertura,
                 "aberto": self._cofre.aberto,
                 "caminho": str(self._cofre.caminho),
                 "windows": autotipo.WINDOWS,
@@ -92,6 +96,24 @@ class Api:
 
     def atividade(self):
         self._uso()
+
+    # ------------------------------------------------------------ janela
+    def codigo_fonte(self):
+        """O próprio código do cofre, que a abertura "digita" nas janelas."""
+        fontes = []
+        for nome in ("nucleo.py", "autotipo.py", "cofre.py"):
+            arquivo = Path(__file__).with_name(nome)
+            if arquivo.exists():
+                fontes.append({"nome": nome, "texto": arquivo.read_text(encoding="utf-8")})
+        return fontes
+
+    def alternar_tela_cheia(self):
+        if self._janela:
+            self._janela.toggle_fullscreen()
+
+    def sair(self):
+        if self._janela:
+            self._janela.destroy()
 
     # ------------------------------------------------------- abrir/fechar
     def criar(self, senha, confirmacao):
@@ -299,8 +321,6 @@ class Api:
             return {"ok": False, "erro": "A janela de destino não existe mais."}
         with self._trava:
             e = dict(self._cofre.obter(id_))
-        if self._janela:
-            self._janela.minimize()
         if not autotipo.focar(jan.hwnd):
             return {"ok": False, "erro": "Não consegui voltar para a janela do site."}
         threading.Thread(target=self._digitar, args=(e, jan), daemon=True).start()
@@ -357,10 +377,13 @@ class Api:
 
 
 def main():
-    arquivo = Path(sys.argv[1]) if len(sys.argv) > 1 else pasta_do_programa() / "cofre.dat"
-    api = Api(nucleo.Cofre(arquivo))
+    opcoes = [a for a in sys.argv[1:] if a.startswith("--")]
+    caminhos = [a for a in sys.argv[1:] if not a.startswith("--")]
+    arquivo = Path(caminhos[0]) if caminhos else pasta_do_programa() / "cofre.dat"
+    api = Api(nucleo.Cofre(arquivo), abertura="--sem-abertura" not in opcoes)
     janela = webview.create_window(TITULO, "ui/index.html", js_api=api, width=1180, height=760,
-                                   min_size=(900, 620), background_color="#03070b")
+                                   min_size=(900, 620), background_color="#070204",
+                                   fullscreen="--janela" not in opcoes)
     api._janela = janela
     janela.events.closed += api._ao_fechar
     threading.Thread(target=api._vigiar_inatividade, daemon=True).start()
