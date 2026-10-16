@@ -20,6 +20,7 @@ import shutil
 import sys
 import time
 
+from .arte_sparta import elmo, palavra_sparta
 from .popups import Tempestade
 from .util import WINDOWS, info_sistema, processos_detalhados, tamanho_legivel
 
@@ -79,6 +80,39 @@ class Teclado:
             os.read(sys.stdin.fileno(), 64)
             return True
         return False
+
+    def ler_tecla(self):
+        """Devolve 'up','down','enter','esc','space', um dígito/letra, ou None."""
+        if WINDOWS:
+            import msvcrt
+            if not msvcrt.kbhit():
+                return None
+            ch = msvcrt.getwch()
+            if ch in ("\x00", "\xe0"):
+                return {"H": "up", "P": "down", "K": "left", "M": "right"}.get(msvcrt.getwch())
+            if ch in ("\r", "\n"):
+                return "enter"
+            if ch == "\x1b":
+                return "esc"
+            if ch == " ":
+                return "space"
+            return ch
+        import select
+        if not select.select([sys.stdin], [], [], 0)[0]:
+            return None
+        dados = os.read(sys.stdin.fileno(), 6)
+        if not dados:
+            return None
+        if dados[:1] == b"\x1b":
+            if dados[1:2] == b"[" and len(dados) > 2:
+                return {"A": "up", "B": "down", "C": "right", "D": "left"}.get(chr(dados[2]))
+            return "esc"
+        c = dados[:1].decode("latin-1", "ignore")
+        if c in ("\r", "\n"):
+            return "enter"
+        if c == " ":
+            return "space"
+        return c
 
     def __exit__(self, *_):
         if self._antigo:
@@ -560,3 +594,191 @@ def executar(tarefas=(), popups=True):
     finally:
         sys.stdout.write("\x1b[0m\x1b[?25h\x1b[?1049l")
         sys.stdout.flush()
+
+
+# ======================================================================
+#  MENU ANIMADO  (central, "desconstruído", com vermelho ao redor)
+# ======================================================================
+class _MenuArte:
+    """Fundo animado e painel central do menu."""
+
+    def __init__(self, largura, altura, opcoes):
+        self.l, self.a = largura, altura
+        self.opcoes = opcoes
+        self.rng = random.Random()
+        self.gotas = []
+        # painel central
+        self.pw = min(66, max(44, largura - 24))
+        self.ph = len(opcoes) + 11
+        self.px = (largura - self.pw) // 2
+        self.py = max(1, (altura - self.ph) // 2)
+        # marca-d'água do elmo, atrás do painel
+        self.marca = elmo(self.pw + 8, self.ph + 2)
+
+    def _chuva(self, q, t):
+        simbolos = "0123456789ABCDEF<>{}[]=+*#$%&@/\\|:;"
+        if self.rng.random() < 0.9:
+            # só nas margens, fora do painel
+            margem = self.px - 2
+            if margem > 2:
+                x = self.rng.randrange(0, margem) if self.rng.random() < 0.5 else \
+                    self.rng.randrange(self.px + self.pw + 2, self.l)
+                self.gotas.append([x, 1.0, self.rng.uniform(0.3, 0.9)])
+        vivas = []
+        for g in self.gotas:
+            g[1] += g[2]
+            for k in range(8):
+                gy = int(g[1]) - k
+                if 1 <= gy < self.a - 1:
+                    cor = BRANCO if k == 0 else _misturar(VIVO, (46, 30, 36), k / 8)
+                    q.escrever(g[0], gy, self.rng.choice(simbolos), cor)
+            if g[1] - 8 < self.a:
+                vivas.append(g)
+        self.gotas = vivas
+
+    def _marca_dagua(self, q, t):
+        x0, y0 = self.px - 4, self.py - 1
+        for ly, linha in enumerate(self.marca):
+            for lx, v in enumerate(linha):
+                if v > 0 and (lx + ly) % 2 == 0:
+                    car = "▓" if v >= 0.9 else "▒"
+                    q.escrever(x0 + lx, y0 + ly, car, _misturar(FUNDO, ESCURO, 0.5))
+
+    def _widgets(self, q, t):
+        # cantos com "atividade" em vermelho
+        for i in range(4):
+            v = (math.sin(t * 3 + i) + 1) / 2
+            barra = "▁▂▃▄▅▆▇█"[int(v * 7)]
+            q.escrever(2 + i, self.a - 2, barra, _misturar(ESCURO, VIVO, v))
+            q.escrever(self.l - 3 - i, self.a - 2, barra, _misturar(ESCURO, VIVO, v))
+        onda = "".join("▁▂▃▄▅▆▇█"[int((math.sin(t * 5 + i * 0.4) + 1) * 3.5)] for i in range(18))
+        q.escrever(2, 1, onda, MEDIO)
+        q.escrever(self.l - 20, 1, onda, MEDIO)
+
+    def _painel(self, q, t, selecao):
+        x, y, w, h = self.px, self.py, self.pw, self.ph
+        q.pintar_fundo(x, y, w, h, (14, 9, 12))
+        # borda com brilho correndo
+        pulso = int(t * 8) % (2 * (w + h))
+        for i in range(w):
+            cor = CLARO if abs(pulso - i) < 3 or abs(pulso - (2 * w + h - 1 - i)) < 3 else FORTE
+            q.escrever(x + i, y, "═" if 0 < i < w - 1 else ("╔" if i == 0 else "╗"), cor)
+            q.escrever(x + i, y + h - 1, "═" if 0 < i < w - 1 else ("╚" if i == 0 else "╝"), FORTE)
+        for j in range(1, h - 1):
+            q.escrever(x, y + j, "║", FORTE)
+            q.escrever(x + w - 1, y + j, "║", FORTE)
+        # título SPARTA grande
+        palavra = palavra_sparta()
+        pl = len(palavra[0])
+        tx = x + (w - pl) // 2
+        for i, linha in enumerate(palavra):
+            for j, c in enumerate(linha):
+                if c != " ":
+                    brilho = (math.sin(t * 3 - j * 0.1) + 1) / 2
+                    q.escrever(tx + j, y + 1 + i, "█", _misturar(FORTE, CLARO, brilho))
+        q.escrever(x + 2, y + 6, "─" * (w - 4), ESCURO)
+        sub = "central de automações do PC"
+        q.escrever(x + (w - len(sub)) // 2, y + 6, f" {sub} ", ROSA, (14, 9, 12))
+        # opções
+        base = y + 8
+        for i, rotulo in enumerate(self.opcoes):
+            yy = base + i
+            if yy >= y + h - 2:
+                break
+            num = f"{i + 1:02}"
+            if i == selecao:
+                marca = "▶ "
+                linha = (marca + f"{num}  {rotulo}").ljust(w - 4)
+                q.escrever(x + 2, yy, linha, PRETO, CLARO)
+            else:
+                q.escrever(x + 2, yy, "  ", CINZA)
+                q.escrever(x + 4, yy, num, VIVO)
+                q.escrever(x + 7, yy, rotulo, TEXTO)
+        # rodapé do painel
+        dica = "↑↓ mover · Enter escolher · nº direto · 0/Esc sair"
+        q.escrever(x + (w - len(dica)) // 2, y + h - 1, f" {dica} ", CINZA, FUNDO)
+
+    def quadro(self, t, selecao):
+        q = Quadro(self.l, self.a)
+        q.pintar_fundo(0, 0, self.l, self.a, (8, 8, 11))
+        relogio = time.strftime(" %d/%m/%y  %H:%M:%S ")
+        q.escrever(self.l - len(relogio), 0, relogio, BRANCO, FUNDO_ESCURO)
+        q.escrever(1, 0, " SPARTA // menu ", PRETO, VIVO)
+        self._marca_dagua(q, t)
+        self._chuva(q, t)
+        self._widgets(q, t)
+        self._painel(q, t, selecao)
+        return q
+
+
+def _menu_simples(opcoes):
+    """Menu em texto puro (terminal pequeno ou sem tty)."""
+    print("\n╔" + "═" * 38 + "╗")
+    print("║" + "S  P  A  R  T  A".center(38) + "║")
+    print("╚" + "═" * 38 + "╝")
+    for i, rotulo in enumerate(opcoes, 1):
+        print(f"  {i:>2}. {rotulo}")
+    print("   0. Sair")
+    escolha = input("\nEscolha: ").strip()
+    if not escolha.isdigit() or not 0 <= int(escolha) <= len(opcoes):
+        return None
+    return None if int(escolha) == 0 else int(escolha) - 1
+
+
+def menu_animado(opcoes, selecao=0):
+    """Mostra o menu animado e devolve o índice escolhido (0-based) ou None (sair)."""
+    tty = (sys.stdout is not None and sys.stdout.isatty()
+           and sys.stdin is not None and sys.stdin.isatty())
+    colunas, linhas = shutil.get_terminal_size((120, 36))
+    if not tty or colunas < 90 or linhas < 24:
+        return _menu_simples(opcoes)
+    if WINDOWS:
+        try:
+            _preparar_windows()
+        except OSError:
+            pass
+        colunas, linhas = shutil.get_terminal_size((120, 36))
+    arte = _MenuArte(colunas - 1, linhas, opcoes)
+    selecao = max(0, min(selecao, len(opcoes) - 1))
+
+    sys.stdout.write("\x1b[?1049h\x1b[?25l")
+    inicio = time.time()
+    anterior = None
+    escolhido = -1   # -1 = ainda escolhendo
+    try:
+        with Teclado() as teclado:
+            while escolhido == -1:
+                t = time.time() - inicio
+                q = arte.quadro(t, selecao)
+                sys.stdout.write(q.ansi(anterior))
+                sys.stdout.flush()
+                anterior = q
+                tecla = teclado.ler_tecla()
+                if tecla == "up" or tecla == "k":
+                    selecao = (selecao - 1) % len(opcoes)
+                elif tecla == "down" or tecla == "j":
+                    selecao = (selecao + 1) % len(opcoes)
+                elif tecla in ("enter", "space"):
+                    escolhido = selecao
+                elif tecla in ("esc", "q", "0"):
+                    escolhido = None
+                elif tecla and tecla.isdigit():
+                    # número digitado: tenta 1..len (suporta 2 dígitos rápidos)
+                    n = int(tecla)
+                    if n == 0:
+                        escolhido = None
+                    else:
+                        proxima = teclado.ler_tecla() if n <= (len(opcoes) // 10) else None
+                        if proxima and proxima.isdigit():
+                            n = n * 10 + int(proxima)
+                        if 1 <= n <= len(opcoes):
+                            escolhido = n - 1
+                        else:
+                            selecao = min(len(opcoes) - 1, n - 1)
+                time.sleep(max(0.0, 1 / QPS - ((time.time() - inicio) - t)))
+    except KeyboardInterrupt:
+        escolhido = None
+    finally:
+        sys.stdout.write("\x1b[0m\x1b[?25h\x1b[?1049l")
+        sys.stdout.flush()
+    return escolhido if escolhido != -1 else None

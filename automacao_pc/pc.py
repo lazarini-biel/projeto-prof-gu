@@ -233,19 +233,13 @@ MENU = [
 def menu(cfg, parser):
     if cfg.get("abertura", True):
         intro.executar(cfg.get("agendamentos", []))
+    rotulos = [rotulo for rotulo, _ in MENU]
+    selecao = 0
     while True:
-        print("\n╔══════════════════════════════════════╗")
-        print("║" + "S  P  A  R  T  A".center(38) + "║")
-        print("╚══════════════════════════════════════╝")
-        for i, (rotulo, _) in enumerate(MENU, 1):
-            print(f"  {i:>2}. {rotulo}")
-        print("   0. Sair")
-        escolha = input("\nEscolha: ").strip()
-        if escolha in ("0", ""):
+        selecao = intro.menu_animado(rotulos, selecao)
+        if selecao is None:
             return
-        if not escolha.isdigit() or not 1 <= int(escolha) <= len(MENU):
-            continue
-        rotulo, argv = MENU[int(escolha) - 1]
+        rotulo, argv = MENU[selecao]
         if argv is None:
             minutos = input("Em quantos minutos? ").strip() or "1"
             argv = ["energia", "desligar", "--em", minutos.replace(",", ".")]
