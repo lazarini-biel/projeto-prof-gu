@@ -23,11 +23,12 @@ Duas coisas para o seu Windows 11:
 
 Dê dois cliques em **`SPARTA.bat`**. Ele abre em **tela cheia** no Windows Terminal, mostra uma abertura animada e depois o menu numerado. Esse é o jeito mais fácil.
 
-**A abertura** abre **várias janelas de CMD de verdade** espalhadas pela tela, com texto vermelho correndo (estilo filme de hacker), e por trás roda um painel com dados reais do PC. As janelas de CMD **se fecham sozinhas** no fim — a quantidade é limitada (no máximo 30), não é um "fork bomb". Qualquer tecla pula tudo. Controles no `config.json`:
-- `"abertura": true/false` — liga/desliga a abertura.
-- `"abertura_segundos": 24` — quanto tempo ela dura (pode pôr 30, 40...).
+**A abertura** tem duas partes: primeiro **várias janelas de CMD de verdade** abrem espalhadas pela tela, com texto vermelho correndo (estilo filme de hacker); depois elas **se fecham sozinhas** e aparece um **painel** com dados reais do PC. A quantidade de CMDs é limitada (no máximo 30), não é um "fork bomb". Qualquer tecla pula o painel. Controles no `config.json`:
+- `"abertura": true/false` — liga/desliga a abertura inteira.
 - `"cmds_reais": true/false` — abrir CMDs de verdade. Se `false` (ou fora do Windows), usa uma versão "desenhada" das janelas, sem abrir nada.
 - `"cmds_qtd": 18` — quantas janelas de CMD abrir (teto de 30).
+- `"cmds_segundos": 7` — quanto tempo os CMDs ficam na tela antes de fechar.
+- `"abertura_segundos": 14` — quanto tempo o painel dura depois (pode pôr 20, 30...).
 Na primeira vez ele cria o `config.json`. **Abra esse arquivo no Bloco de Notas e ajuste para o seu PC** (pastas, discos, programas).
 
 > Tudo que mexe em arquivos mostra primeiro uma **prévia** e só aplica com `--executar` (ou quando você responde "s" no menu).

@@ -13,6 +13,7 @@ abertura usa a tempestade "fake" (popups.py).
 """
 
 import ctypes
+import os
 import random
 import subprocess
 import sys
@@ -23,6 +24,8 @@ MAX_JANELAS = 30
 # Animação dentro de cada janelinha (recebe título e duração por argv). Só vermelho.
 _ANIMACAO = r'''
 import sys, time, random, ctypes
+if sys.stdout is None:          # pythonw sem console: nada a fazer
+    raise SystemExit
 titulo = sys.argv[1]; dur = float(sys.argv[2])
 k = ctypes.windll.kernel32
 try: k.SetConsoleTitleW(titulo)
@@ -100,6 +103,11 @@ def abrir(quantidade, duracao, rng=None):
         return None
 
     exe = sys.executable or "python"
+    # usa python.exe (com console), nunca pythonw.exe (sem stdout → janela preta)
+    if exe.lower().endswith("pythonw.exe"):
+        cand = exe[:-len("pythonw.exe")] + "python.exe"
+        if os.path.exists(cand):
+            exe = cand
     pendentes = []     # (titulo, proc) ainda sem posição
     procs = []
     for i in range(quantidade):

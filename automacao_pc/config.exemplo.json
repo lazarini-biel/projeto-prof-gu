@@ -1,8 +1,9 @@
 {
   "abertura": true,
-  "abertura_segundos": 16,
   "cmds_reais": true,
   "cmds_qtd": 18,
+  "cmds_segundos": 7,
+  "abertura_segundos": 14,
 
   "_leia_me": "Este é o modelo. Na 1ª execução ele vira config.json — edite o config.json. Use barras normais (/) nas pastas; %USERPROFILE%, %LOCALAPPDATA% etc. funcionam.",
 

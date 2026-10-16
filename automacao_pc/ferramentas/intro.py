@@ -566,51 +566,12 @@ def _trazer_terminal_para_frente():
         pass
 
 
-def executar(tarefas=(), popups=True, cfg=None):
-    """Mostra a abertura. Não faz nada se não houver um terminal de verdade.
-
-    No Windows (e se ligado no config) abre várias janelas de CMD de verdade
-    que enchem a tela e se fecham sozinhas; por trás roda o painel (dashboard).
-    Fora do Windows, usa a tempestade "fake". Qualquer tecla pula tudo.
-
-    config: abertura_segundos (duração total), cmds_reais (bool), cmds_qtd.
-    """
-    if sys.stdout is None or not sys.stdout.isatty() or sys.stdin is None or not sys.stdin.isatty():
-        return
-    if WINDOWS:
-        try:
-            _preparar_windows()
-        except OSError:
-            pass
-    colunas, linhas = shutil.get_terminal_size((120, 36))
-    if colunas < 120 or linhas < 34:
-        return   # janela pequena demais para o efeito
-    largura = colunas - 1
-    cfg = cfg or {}
-    total = max(6.0, min(float(cfg.get("abertura_segundos", 16)), 180.0))
-
-    # tenta abrir CMDs de verdade (Windows); senão, usa a tempestade fake.
-    # Os CMDs duram só a 1ª parte (~60%): depois somem e aparece o painel.
-    flood = None
-    if WINDOWS and cfg.get("cmds_reais", True):
-        try:
-            from . import cmd_flood
-            flood = cmd_flood.abrir(cfg.get("cmds_qtd", 18), min(total * 0.6, 9.0))
-        except Exception:
-            flood = None
-
-    if flood:
-        tempestade, t_storm, dash_dur = None, 0.0, total
-    else:
-        dur_storm = max(6.0, total * 0.45) if popups else 0.0
-        tempestade = Tempestade(largura, linhas, duracao=dur_storm) if dur_storm else None
-        t_storm = tempestade.duracao if tempestade else 0.0
-        dash_dur = total - t_storm
-    abertura = Abertura(largura, linhas, info_sistema(), tarefas, processos_detalhados(),
-                        duracao=dash_dur)
-
+def _rodar_painel(abertura, dash_seg, tempestade=None, t_storm=0.0):
+    """Abre a tela alternativa e roda a tempestade fake (se houver) + o painel.
+    Qualquer tecla pula."""
     sys.stdout.write("\x1b[?1049h\x1b[?25l")   # tela alternativa, sem cursor
     inicio = time.time()
+    total = t_storm + dash_seg
     try:
         anterior = None
         with Teclado() as teclado:
@@ -629,12 +590,67 @@ def executar(tarefas=(), popups=True, cfg=None):
     except KeyboardInterrupt:
         pass
     finally:
-        if flood:
-            flood.fechar()
         sys.stdout.write("\x1b[0m\x1b[?25h\x1b[?1049l")
         sys.stdout.flush()
-        if flood:
+
+
+def executar(tarefas=(), popups=True, cfg=None):
+    """Mostra a abertura. Não faz nada se não houver um terminal de verdade.
+
+    Ordem: PRIMEIRO os CMDs enchem a tela (no Windows, janelas de verdade que
+    se fecham sozinhas); DEPOIS eles fecham e aparece o painel (dashboard).
+    Fora do Windows, usa a tempestade "fake". Qualquer tecla pula o painel.
+
+    config: cmds_segundos (tempo dos CMDs na frente), abertura_segundos (tempo
+    do painel depois), cmds_reais (bool), cmds_qtd.
+    """
+    if sys.stdout is None or not sys.stdout.isatty() or sys.stdin is None or not sys.stdin.isatty():
+        return
+    colunas, linhas = shutil.get_terminal_size((120, 36))
+    if colunas < 120 or linhas < 34:
+        return   # janela pequena demais para o efeito
+    largura = colunas - 1
+    cfg = cfg or {}
+    cmds_seg = max(0.0, min(float(cfg.get("cmds_segundos", 7)), 60.0))
+    dash_seg = max(4.0, min(float(cfg.get("abertura_segundos", 14)), 180.0))
+    abertura = Abertura(largura, linhas, info_sistema(), tarefas, processos_detalhados(),
+                        duracao=dash_seg)
+
+    # 1) CMDs de verdade (Windows)? Eles ficam na FRENTE durante cmds_seg.
+    flood = None
+    if WINDOWS and cmds_seg > 0 and cfg.get("cmds_reais", True):
+        try:
+            from . import cmd_flood
+            flood = cmd_flood.abrir(cfg.get("cmds_qtd", 18), cmds_seg)
+        except Exception:
+            flood = None
+
+    if flood:
+        try:
+            fim = time.time() + cmds_seg            # deixa os CMDs na tela
+            while time.time() < fim:
+                time.sleep(0.1)
+        finally:
+            flood.fechar()                          # fecham na hora
+        if WINDOWS:
+            try:
+                _preparar_windows()                 # traz o terminal à frente e maximiza
+            except OSError:
+                pass
             _trazer_terminal_para_frente()
+            time.sleep(0.2)
+        _rodar_painel(abertura, dash_seg)           # 2) agora sim, o painel
+        return
+
+    # Sem CMDs reais: tudo na tela alternativa (tempestade fake + painel)
+    if WINDOWS:
+        try:
+            _preparar_windows()
+        except OSError:
+            pass
+    tempestade = Tempestade(largura, linhas, duracao=cmds_seg) if (popups and cmds_seg) else None
+    t_storm = tempestade.duracao if tempestade else 0.0
+    _rodar_painel(abertura, dash_seg, tempestade=tempestade, t_storm=t_storm)
 
 
 # ======================================================================

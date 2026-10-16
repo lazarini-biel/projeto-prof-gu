@@ -61,11 +61,11 @@ body.desbloqueado #chuva { opacity: .12; }
 .anel.tracejado { stroke-width: 2; stroke-dasharray: 3 9; opacity: .8; }
 .anel.arco { stroke-width: 3; stroke-dasharray: 120 370; stroke-linecap: round; }
 .mira { stroke: var(--neon); stroke-width: 2; }
-.varredura { fill: rgba(255,51,85,.10); transform-origin: 110px 110px; animation: girar 8s linear infinite; }
+.varredura { fill: rgba(255,51,85,.10); transform-origin: 110px 110px; animation: girar 22s linear infinite; }
 .gira-lento, .gira-rapido, .gira-reverso { transform-origin: 110px 110px; transform-box: view-box; }
-.gira-lento { animation: girar 40s linear infinite; }
-.gira-rapido { animation: girar 12s linear infinite; }
-.gira-reverso { animation: girar 60s linear infinite reverse; }
+.gira-lento { animation: girar 95s linear infinite; }
+.gira-rapido { animation: girar 34s linear infinite; }
+.gira-reverso { animation: girar 150s linear infinite reverse; }
 @keyframes girar { to { transform: rotate(360deg); } }
 
 .cadeado { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; transform: translate(-50%, -50%);
