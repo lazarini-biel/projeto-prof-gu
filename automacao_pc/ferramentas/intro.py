@@ -20,7 +20,7 @@ import shutil
 import sys
 import time
 
-from .arte_sparta import palavra_sparta
+from .arte_sparta import palavra_sparta_grande
 from .popups import Tempestade
 from .util import WINDOWS, info_sistema, processos_detalhados, tamanho_legivel
 
@@ -664,9 +664,9 @@ class _MenuArte:
         self.opcoes = opcoes
         self.rng = random.Random()
         self.gotas = []
-        # painel central
-        self.pw = min(66, max(44, largura - 24))
-        self.ph = len(opcoes) + 11
+        # painel central (título grande ocupa 7 linhas)
+        self.pw = min(74, max(52, largura - 20))
+        self.ph = len(opcoes) + 13
         self.px = (largura - self.pw) // 2
         self.py = max(1, (altura - self.ph) // 2)
 
@@ -714,20 +714,20 @@ class _MenuArte:
         for j in range(1, h - 1):
             q.escrever(x, y + j, "║", FORTE)
             q.escrever(x + w - 1, y + j, "║", FORTE)
-        # título SPARTA grande
-        palavra = palavra_sparta()
+        # título SPARTA grande (7 linhas, bem largo e grosso)
+        palavra = palavra_sparta_grande()
         pl = len(palavra[0])
         tx = x + (w - pl) // 2
         for i, linha in enumerate(palavra):
             for j, c in enumerate(linha):
                 if c != " ":
-                    brilho = (math.sin(t * 3 - j * 0.1) + 1) / 2
-                    q.escrever(tx + j, y + 1 + i, "█", _misturar(FORTE, CLARO, brilho))
-        q.escrever(x + 2, y + 6, "─" * (w - 4), ESCURO)
-        sub = "central de automações do PC"
-        q.escrever(x + (w - len(sub)) // 2, y + 6, f" {sub} ", ROSA, (14, 9, 12))
+                    brilho = (math.sin(t * 3 - j * 0.06) + 1) / 2
+                    q.escrever(tx + j, y + 1 + i, c, _misturar(FORTE, CLARO, brilho))
+        q.escrever(x + 2, y + 8, "─" * (w - 4), ESCURO)
+        sub = "Central de Sistemas"
+        q.escrever(x + (w - len(sub)) // 2, y + 8, f" {sub} ", ROSA, (14, 9, 12))
         # opções
-        base = y + 8
+        base = y + 10
         for i, rotulo in enumerate(self.opcoes):
             yy = base + i
             if yy >= y + h - 2:

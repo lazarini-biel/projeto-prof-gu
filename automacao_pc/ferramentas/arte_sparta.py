@@ -112,3 +112,18 @@ def cartaz(cols, rows):
             if c != " " and 0 <= py + i < rows and 0 <= px + j < cols:
                 g[py + i][px + j] = 1.5
     return g
+
+
+# Fonte GRANDE e grossa para o título do menu (7 linhas, traço de 2).
+_FONTE_GRANDE = {
+    "S": ["██████", "██    ", "██    ", "██████", "    ██", "    ██", "██████"],
+    "P": ["██████", "██  ██", "██  ██", "██████", "██    ", "██    ", "██    "],
+    "A": [" ████ ", "██  ██", "██  ██", "██████", "██  ██", "██  ██", "██  ██"],
+    "R": ["██████", "██  ██", "██  ██", "██████", "████  ", "██ ██ ", "██  ██"],
+    "T": ["██████", "  ██  ", "  ██  ", "  ██  ", "  ██  ", "  ██  ", "  ██  "],
+}
+
+
+def palavra_sparta_grande(sep="  "):
+    """SPARTA em 7 linhas, bem largo e grosso (para o título do menu)."""
+    return [sep.join(_FONTE_GRANDE[c][i] for c in "SPARTA") for i in range(7)]
