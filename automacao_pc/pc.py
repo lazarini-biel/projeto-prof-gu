@@ -27,7 +27,7 @@ import sys
 import time
 
 from ferramentas import (agendador, discos, duplicados, energia, inicio, intro, limpeza,
-                         movimentos, organizar, remoto)
+                         movimentos, organizar, remoto, sistema, tema)
 from ferramentas.categorias import montar_mapa
 from ferramentas.util import PASTA_LOGS, caminho, carregar_config
 
@@ -50,6 +50,7 @@ def cmd_organizar(cfg, args):
         idade_minima_min=c.get("idade_minima_minutos", 10),
         separar_por_ano=c.get("separar_por_ano", False),
         mover_desconhecidos=c.get("mover_desconhecidos", True),
+        saida=tema.saida,
     )
 
 
@@ -63,18 +64,20 @@ def cmd_duplicados(cfg, args):
         ignorar=c.get("ignorar_pastas", []),
         preferir=[caminho(p) for p in c.get("preferir_manter_em", [])],
         confirmado=args.sim,
+        saida=tema.saida,
     )
 
 
 def cmd_discos(cfg, args):
     if args.acao == "maiores":
         alvo = args.pastas or ["~"]
-        discos.maiores([caminho(p) for p in alvo], top=args.top)
+        discos.maiores([caminho(p) for p in alvo], top=args.top, saida=tema.saida)
     elif args.acao == "redistribuir":
         return discos.redistribuir(cfg.get("redistribuir", {}),
-                                   montar_mapa(cfg.get("categorias_extras")), aplicar=args.executar)
+                                   montar_mapa(cfg.get("categorias_extras")),
+                                   aplicar=args.executar, saida=tema.saida)
     else:
-        discos.relatorio()
+        discos.relatorio(saida=tema.saida)
 
 
 def cmd_limpar(cfg, args):
@@ -85,11 +88,12 @@ def cmd_limpar(cfg, args):
         navegadores=c.get("navegadores", True),
         sistema=args.sistema or c.get("sistema", False),
         lixeira=args.lixeira or c.get("esvaziar_lixeira", False),
+        saida=tema.saida,
     )
 
 
 def cmd_iniciar(cfg, args):
-    inicio.executar(cfg.get("inicio", {}), args.perfil, sem_atraso=args.agora)
+    inicio.executar(cfg.get("inicio", {}), args.perfil, sem_atraso=args.agora, saida=tema.saida)
 
 
 def cmd_energia(cfg, args):
@@ -100,17 +104,17 @@ def cmd_energia(cfg, args):
         "bloquear": energia.bloquear,
         "cancelar": energia.cancelar,
     }
-    print(acoes[args.acao]()[1])
+    tema.saida(acoes[args.acao]()[1])
 
 
 def cmd_agendar(cfg, args):
     itens = cfg.get("agendamentos", [])
     if args.acao == "instalar":
-        agendador.instalar(itens, usuario=args.usuario, pausar=args.pausar)
+        agendador.instalar(itens, usuario=args.usuario, pausar=args.pausar, saida=tema.saida)
     elif args.acao == "remover":
-        agendador.remover(itens)
+        agendador.remover(itens, saida=tema.saida)
     else:
-        agendador.listar()
+        agendador.listar(saida=tema.saida)
 
 
 def cmd_remoto(cfg, args):
@@ -125,11 +129,15 @@ def cmd_remoto(cfg, args):
 def cmd_desfazer(cfg, args):
     registros = movimentos.registros_disponiveis()
     if not registros:
-        print("Nada para desfazer.")
+        tema.saida("Nada para desfazer.")
         return
     alvo = registros[0]
-    print(f"Desfazendo {alvo.name}...")
-    movimentos.desfazer(alvo)
+    tema.saida(f"Desfazendo {alvo.name}...")
+    movimentos.desfazer(alvo, saida=tema.saida)
+
+
+def cmd_sistema(cfg, args):
+    sistema.relatorio()
 
 
 def montar_parser():
@@ -182,6 +190,9 @@ def montar_parser():
 
     s = sub.add_parser("desfazer", help="desfaz a última movimentação de arquivos")
     s.set_defaults(func=cmd_desfazer)
+
+    s = sub.add_parser("sistema", help="mostra informações do PC (CPU, memória, discos...)")
+    s.set_defaults(func=cmd_sistema)
     return p
 
 
@@ -196,9 +207,20 @@ def _como_aplicar(argv):
     return None
 
 
-def rodar(cfg, parser, argv, perguntar):
+_TITULOS_CMD = {
+    "organizar": "Organizar Downloads", "duplicados": "Arquivos duplicados",
+    "discos": "Discos", "limpar": "Limpeza", "iniciar": "Abrir programas e sites",
+    "energia": "Energia", "agendar": "Tarefas automáticas", "desfazer": "Desfazer",
+    "remoto": "Controle remoto", "sistema": "Informações do PC",
+}
+
+
+def rodar(cfg, parser, argv, perguntar, topo=True):
     """Roda um comando. Se foi só uma prévia com algo a fazer, pergunta se aplica
     (ou, sem ninguém no teclado, mostra o comando completo para aplicar)."""
+    if topo and argv and argv[0] != "sistema":   # sistema tem cabeçalho próprio
+        tema.cabecalho(_TITULOS_CMD.get(argv[0], argv[0]))
+        print()
     args = parser.parse_args(argv)
     resultado = args.func(cfg, args)
     proximo = _como_aplicar(argv) if resultado else None
@@ -208,7 +230,7 @@ def rodar(cfg, parser, argv, perguntar):
     if perguntar:
         if input(f"\n{pergunta} (s/n) ").strip().lower() in ("s", "sim"):
             print()
-            rodar(cfg, parser, argv_aplicar, perguntar=False)
+            rodar(cfg, parser, argv_aplicar, perguntar=False, topo=False)
     else:
         print(f"\nPara aplicar: py pc.py {subprocess.list2cmdline(argv_aplicar)}")
 
@@ -218,6 +240,7 @@ def _tem_teclado():
 
 
 MENU = [
+    ("Ver informações do PC", ["sistema"]),
     ("Organizar a pasta Downloads", ["organizar"]),
     ("Procurar arquivos duplicados", ["duplicados"]),
     ("Ver espaço dos discos", ["discos"]),
@@ -250,6 +273,7 @@ def menu(cfg, parser):
 
 def main(argv=None):
     _log_sem_console()
+    tema.ativar()
     argv = sys.argv[1:] if argv is None else argv
     parser = montar_parser()
     args = parser.parse_args(argv)

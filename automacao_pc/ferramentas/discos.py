@@ -56,12 +56,14 @@ def unidades():
 
 
 def relatorio(saida=print):
+    from . import tema
     for raiz, rotulo, tipo, total, livre in unidades():
         pct = (total - livre) / total if total else 0
-        barra = "█" * round(pct * 24) + "░" * (24 - round(pct * 24))
-        alerta = "  ⚠ quase cheio" if pct > 0.9 else ""
-        saida(f"{raiz:<4} {rotulo[:14]:<14} {tipo:<9} [{barra}] {pct:4.0%}  "
-              f"livre {tamanho_legivel(livre):>9} de {tamanho_legivel(total):>9}{alerta}")
+        rot = f"{raiz.rstrip(chr(92)):<4}{rotulo[:14]:<15}{tema.cor(tipo, tema.CINZA)}"
+        alerta = tema.cor("  ⚠ quase cheio", tema.VIVO) if pct > 0.9 else ""
+        saida(f"{rot}  {tema.barra(pct, 22, aviso=pct > 0.9)} {tema.realce(f'{pct:4.0%}')}  "
+              f"{tema.cor('livre', tema.CINZA)} {tema.realce(tamanho_legivel(livre))} "
+              f"{tema.cor('de ' + tamanho_legivel(total), tema.CINZA)}{alerta}")
 
 
 def _varrer(raizes, ignorar=()):

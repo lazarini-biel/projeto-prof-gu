@@ -34,6 +34,12 @@ Na primeira vez ele cria o `config.json`. **Abra esse arquivo no Bloco de Notas 
 > Tudo que mexe em arquivos mostra primeiro uma **prévia** e só aplica com `--executar` (ou quando você responde "s" no menu).
 > Movimentações podem ser desfeitas com `py pc.py desfazer`.
 
+### Ver informações do PC
+```
+py pc.py sistema
+```
+Mostra um painel em vermelho com: sistema, processador e núcleos, placa de vídeo, placa-mãe, memória (com barra), tempo ligado, IP local, bateria (em notebooks) e os discos. Só leitura.
+
 ### Organizar Downloads
 ```
 py pc.py organizar              prévia
