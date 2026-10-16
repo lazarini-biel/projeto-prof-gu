@@ -279,3 +279,14 @@ input[type=range] { accent-color: var(--neon); padding: 0 !important; border: 0 
 .controles-janela button:hover { color: #fff; border-color: var(--neon); }
 .controles-janela button.fechar:hover { background: #c4102f; }
 #tela-login .sup-dir { top: 48px; }
+
+/* janelas que montam o elmo (quebra-cabeça) */
+.janela-cmd.logo { border-color: #8c1028; box-shadow: 0 0 20px -4px rgba(255,51,85,.65); }
+.janela-cmd.logo .barra-titulo { height: 16px; font-size: 10px;
+  background: linear-gradient(90deg, #a3122c, #4a0812); }
+.janela-cmd.logo pre { padding: 1px 2px; line-height: 1.05; letter-spacing: 0;
+  font-family: var(--mono); font-size: 1.15vw; color: #4a1019; white-space: pre; }
+.janela-cmd.logo pre b { font-weight: 400; }
+.janela-cmd.logo pre .w { color: #ffffff; text-shadow: 0 0 6px rgba(255,255,255,.6); }
+.janela-cmd.logo pre .e { color: #ff6a85; }
+.janela-cmd.logo pre .f { color: #d2244a; }
