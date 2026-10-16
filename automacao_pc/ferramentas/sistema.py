@@ -256,3 +256,31 @@ def fechar(saida=None, entrada=input, n=22):
         else:
             tema.saida(tema.cor(f"  ! não consegui fechar {nome} (PID {pid}) — tente como administrador", tema.VIVO))
     tema.saida(tema.bom(f"\n{ok} processo(s) encerrados."))
+
+
+def atualizar(aplicar=False, saida=None):
+    """Atualiza todos os programas via winget (gerenciador do Windows)."""
+    tema.cabecalho("Atualizar programas", "usa o winget (gerenciador do Windows)")
+    if not WINDOWS:
+        tema.saida(tema.cor("O winget é do Windows.", tema.CINZA))
+        return
+    if not _run(["where", "winget"]):
+        tema.saida(tema.cor("winget não encontrado. Ele vem no Windows 10/11 atuais; "
+                            "se faltar, instale o 'Instalador de Aplicativo' pela Microsoft Store.", tema.VIVO))
+        return
+    if not aplicar:
+        tema.saida(tema.cor("Programas com atualização disponível:\n", tema.CINZA))
+        lista = _run(["winget", "upgrade", "--include-unknown"]) or "(nada a mostrar)"
+        for linha in lista.splitlines():
+            tema.saida("  " + linha)
+        tema.saida(tema.cor("\nPara atualizar tudo: py pc.py atualizar --executar", tema.ROSA))
+        return
+    tema.saida(tema.cor("Atualizando tudo... (pode demorar; acompanhe abaixo)\n", tema.CINZA))
+    try:
+        subprocess.run(["winget", "upgrade", "--all", "--silent",
+                        "--accept-source-agreements", "--accept-package-agreements"],
+                       **_SW_OCULTO)
+    except (OSError, subprocess.SubprocessError) as erro:
+        tema.saida(tema.cor(f"Erro ao rodar o winget: {erro}", tema.VIVO))
+        return
+    tema.saida(tema.bom("\nPronto."))

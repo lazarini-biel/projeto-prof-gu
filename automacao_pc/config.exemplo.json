@@ -57,6 +57,7 @@
 
   "limpeza": {
     "idade_minima_horas": 24,
+    "downloads_antigos_dias": 30,
     "navegadores": true,
     "sistema": false,
     "esvaziar_lixeira": false
@@ -86,9 +87,17 @@
     {"nome": "Controle remoto Telegram", "comando": "remoto", "quando": "logon", "ativo": false},
     {"nome": "Organizar Downloads", "comando": "organizar --executar", "quando": "a_cada_horas", "horas": 2, "ativo": true},
     {"nome": "Limpeza semanal", "comando": "limpar --executar", "quando": "semanal", "dias": ["dom"], "hora": "12:00", "ativo": true},
+    {"nome": "Limpar Downloads antigos", "comando": "downloads --executar", "quando": "semanal", "dias": ["dom"], "hora": "12:10", "ativo": false},
     {"nome": "Redistribuir arquivos", "comando": "discos redistribuir --executar", "quando": "semanal", "dias": ["sab"], "hora": "13:00", "ativo": false},
     {"nome": "Desligar de madrugada", "comando": "energia desligar --em 5", "quando": "diario", "hora": "01:30", "ativo": false}
   ],
+
+  "foco": {
+    "estudo": {"fechar": ["discord.exe", "steam.exe", "epicgameslauncher.exe", "spotify.exe"], "mensagem": "Bons estudos! 📚"},
+    "jogos":  {"fechar": ["chrome.exe", "msedge.exe", "teams.exe", "onedrive.exe"], "mensagem": "Modo jogos 🎮"},
+    "foco":   {"fechar": ["discord.exe", "spotify.exe", "steam.exe", "whatsapp.exe"], "mensagem": "Foco total 🎯"},
+    "dormir": {"fechar": ["*"], "desligar_em_min": 30, "mensagem": "Boa noite 🌙"}
+  },
 
   "espaco_pastas": {
     "onde": ["%USERPROFILE%", "C:/"],

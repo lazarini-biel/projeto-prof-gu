@@ -34,6 +34,27 @@ Na primeira vez ele cria o `config.json`. **Abra esse arquivo no Bloco de Notas 
 > Tudo que mexe em arquivos mostra primeiro uma **prévia** e só aplica com `--executar` (ou quando você responde "s" no menu).
 > Movimentações podem ser desfeitas com `py pc.py desfazer`.
 
+### Modos de foco
+```
+py pc.py foco            lista os modos
+py pc.py foco estudo
+py pc.py foco dormir
+```
+Cada modo fecha os programas que atrapalham (e pode abrir sites ou programar o desligamento). Crie os seus em `config.json` > `foco`. O modo "dormir" usa `"fechar": ["*"]` para fechar tudo em segundo plano (menos o essencial do Windows).
+
+### Atualizar programas
+```
+py pc.py atualizar               mostra o que tem atualização
+py pc.py atualizar --executar     atualiza tudo (winget)
+```
+
+### Limpar Downloads antigos
+```
+py pc.py downloads                prévia dos arquivos com mais de 30 dias
+py pc.py downloads --executar     manda para a Lixeira
+```
+Ajuste os dias em `config.json` > `limpeza` > `downloads_antigos_dias`. Há uma tarefa agendada pronta (desligada por padrão) em `agendamentos`.
+
 ### Liberar memória / fechar programas
 ```
 py pc.py fechar

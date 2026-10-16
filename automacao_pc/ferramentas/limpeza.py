@@ -144,3 +144,50 @@ def executar(aplicar=False, idade_horas=24, navegadores=True, sistema=False,
         saida(f"  {rotulo:<28} {texto}")
     saida(f"\n{'Liberado' if aplicar else 'Dá para liberar'}: {tamanho_legivel(total_geral)}")
     return total_geral
+
+
+def downloads_antigos(pasta, dias=30, aplicar=False, saida=print, agora=None):
+    """Manda para a Lixeira os arquivos da pasta Downloads com mais de `dias`.
+    Só arquivos soltos na raiz (não mexe em subpastas)."""
+    from . import tema
+    from .duplicados import mandar_para_lixeira
+    import time as _t
+    agora = _t.time() if agora is None else agora
+    pasta = Path(pasta)
+    if not pasta.is_dir():
+        saida(f"Pasta não encontrada: {pasta}")
+        return []
+    limite = agora - dias * 86400
+    velhos, tamanho = [], 0
+    for item in pasta.iterdir():
+        if not item.is_file() or item.is_symlink() or item.name.lower() in IGNORAR:
+            continue
+        try:
+            st = item.stat()
+        except OSError:
+            continue
+        if st.st_mtime < limite:
+            velhos.append(item)
+            tamanho += st.st_size
+    if not velhos:
+        saida(tema.cor(f"Nenhum arquivo com mais de {dias} dias em {pasta}.", tema.CINZA))
+        return []
+    saida(f"{tema.cor(f'{len(velhos)} arquivo(s) com mais de {dias} dias', tema.VIVO)} "
+          f"({tamanho_legivel(tamanho)}):")
+    for item in velhos[:20]:
+        dias_item = int((agora - item.stat().st_mtime) / 86400)
+        saida(f"  {tema.cor(f'{dias_item:>4}d', tema.CINZA)}  {tema.realce(item.name)}")
+    if len(velhos) > 20:
+        saida(tema.cor(f"  ... e mais {len(velhos) - 20}.", tema.CINZA))
+    if not aplicar:
+        saida(tema.cor("\nNada foi apagado. Use --executar para mandar para a Lixeira.", tema.CINZA))
+        return velhos
+    if WINDOWS:
+        n = mandar_para_lixeira(velhos)
+        saida(tema.bom(f"\n{n} arquivo(s) foram para a Lixeira."))
+    else:
+        saida("A Lixeira só é suportada no Windows.")
+    return velhos
+
+
+IGNORAR = {"desktop.ini", "thumbs.db", ".ds_store"}

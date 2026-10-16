@@ -27,7 +27,7 @@ import sys
 import time
 
 from ferramentas import (agendador, discos, duplicados, energia, inicio, intro, limpeza,
-                         movimentos, notas, organizar, painel_web, rede, remoto, sistema, tema)
+                         foco, movimentos, notas, organizar, painel_web, rede, remoto, sistema, tema)
 from ferramentas.categorias import montar_mapa
 from ferramentas.util import PASTA_LOGS, caminho, carregar_config
 
@@ -171,6 +171,25 @@ def cmd_rede(cfg, args):
     rede.dispositivos()
 
 
+def cmd_foco(cfg, args):
+    if args.modo:
+        foco.ativar(cfg, args.modo)
+    else:
+        foco.listar_modos(cfg)
+
+
+def cmd_atualizar(cfg, args):
+    sistema.atualizar(aplicar=args.executar)
+    return not args.executar
+
+
+def cmd_downloads(cfg, args):
+    c = cfg.get("organizar", {})
+    pasta = caminho(c.get("pasta", "~/Downloads"))
+    dias = cfg.get("limpeza", {}).get("downloads_antigos_dias", 30)
+    return limpeza.downloads_antigos(pasta, dias=dias, aplicar=args.executar, saida=tema.saida)
+
+
 def cmd_notas(cfg, args):
     if args.acao == "add":
         notas.adicionar(" ".join(args.resto))
@@ -263,6 +282,18 @@ def montar_parser():
     s.add_argument("acao", nargs="?", choices=["listar", "add", "rm", "limpar"], default="listar")
     s.add_argument("resto", nargs="*")
     s.set_defaults(func=cmd_notas)
+
+    s = sub.add_parser("foco", help="modos de foco (estudo, jogos, foco, dormir...)")
+    s.add_argument("modo", nargs="?")
+    s.set_defaults(func=cmd_foco)
+
+    s = sub.add_parser("atualizar", help="atualiza os programas via winget")
+    s.add_argument("--executar", action="store_true")
+    s.set_defaults(func=cmd_atualizar)
+
+    s = sub.add_parser("downloads", help="manda Downloads antigos para a Lixeira")
+    s.add_argument("--executar", action="store_true")
+    s.set_defaults(func=cmd_downloads)
     return p
 
 
@@ -270,8 +301,10 @@ def _como_aplicar(argv):
     """Depois de uma prévia: (argumentos que aplicam, pergunta) ou None."""
     if "--executar" in argv or "--acao" in argv:
         return None
-    if argv[0] in ("organizar", "limpar") or argv[:2] == ["discos", "redistribuir"]:
+    if argv[0] in ("organizar", "limpar", "downloads") or argv[:2] == ["discos", "redistribuir"]:
         return argv + ["--executar"], "Aplicar agora?"
+    if argv[0] == "atualizar":
+        return argv + ["--executar"], "Atualizar tudo agora?"
     if argv[0] == "duplicados":
         return argv + ["--acao", "lixeira"], "Mandar as cópias para a Lixeira?"
     return None
@@ -284,7 +317,8 @@ _TITULOS_CMD = {
     "remoto": "Controle remoto", "sistema": "Informações do PC",
     "top": "Top processos", "painel": "Painel no navegador", "pastas": "Espaço por pasta",
     "fechar": "Liberar memória", "internet": "Teste de internet", "rede": "Dispositivos na rede",
-    "notas": "Lembretes / notas",
+    "notas": "Lembretes / notas", "foco": "Modos de foco", "atualizar": "Atualizar programas",
+    "downloads": "Downloads antigos",
 }
 
 
@@ -292,7 +326,8 @@ def rodar(cfg, parser, argv, perguntar, topo=True):
     """Roda um comando. Se foi só uma prévia com algo a fazer, pergunta se aplica
     (ou, sem ninguém no teclado, mostra o comando completo para aplicar)."""
     if topo and argv and argv[0] not in (
-            "sistema", "top", "fechar", "internet", "rede", "notas"):   # têm cabeçalho próprio
+            "sistema", "top", "fechar", "internet", "rede", "notas",
+            "foco", "atualizar", "downloads"):   # têm cabeçalho próprio
         tema.cabecalho(_TITULOS_CMD.get(argv[0], argv[0]))
         print()
     args = parser.parse_args(argv)
@@ -328,6 +363,9 @@ MENU = [
     ("Espaço por pasta (o que enche o disco)", ["discos", "pastas"]),
     ("Redistribuir arquivos entre os discos", ["discos", "redistribuir"]),
     ("Limpar temporários e caches", ["limpar"]),
+    ("Limpar Downloads antigos", ["downloads"]),
+    ("Atualizar programas (winget)", ["atualizar"]),
+    ("Modos de foco (estudo/jogos/dormir)", ["foco"]),
     ("Abrir meus programas e sites", ["iniciar", "padrao", "--agora"]),
     ("Desligar o PC em X minutos", None),
     ("Instalar/atualizar tarefas automáticas", ["agendar", "instalar"]),
