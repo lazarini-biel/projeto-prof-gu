@@ -20,6 +20,7 @@ import shutil
 import sys
 import time
 
+from .popups import Tempestade
 from .util import WINDOWS, info_sistema, processos_detalhados, tamanho_legivel
 
 QPS = 20
@@ -509,8 +510,19 @@ class Abertura:
         return q
 
 
-def executar(tarefas=()):
-    """Mostra a abertura. Não faz nada se não houver um terminal de verdade."""
+def _quadro_tempestade(tempestade, t):
+    q = Quadro(tempestade.l, tempestade.a)
+    q.pintar_fundo(0, 0, tempestade.l, tempestade.a, (8, 8, 11))   # quase preto
+    tempestade.desenhar(q, t)
+    return q
+
+
+def executar(tarefas=(), popups=True):
+    """Mostra a abertura. Não faz nada se não houver um terminal de verdade.
+
+    Fases: tempestade de pop-ups que monta o elmo da SPARTA, depois o painel
+    (dashboard) e o "SISTEMA PRONTO". Qualquer tecla pula tudo.
+    """
     if sys.stdout is None or not sys.stdout.isatty() or sys.stdin is None or not sys.stdin.isatty():
         return
     if WINDOWS:
@@ -521,7 +533,10 @@ def executar(tarefas=()):
     colunas, linhas = shutil.get_terminal_size((120, 36))
     if colunas < 120 or linhas < 34:
         return   # janela pequena demais para o efeito
-    abertura = Abertura(colunas - 1, linhas, info_sistema(), tarefas, processos_detalhados())
+    largura = colunas - 1
+    tempestade = Tempestade(largura, linhas) if popups else None
+    t_storm = tempestade.duracao if tempestade else 0.0
+    abertura = Abertura(largura, linhas, info_sistema(), tarefas, processos_detalhados())
 
     sys.stdout.write("\x1b[?1049h\x1b[?25l")   # tela alternativa, sem cursor
     inicio = time.time()
@@ -530,11 +545,14 @@ def executar(tarefas=()):
         with Teclado() as teclado:
             while True:
                 t = time.time() - inicio
-                quadro = abertura.quadro(t)
+                if tempestade and t < t_storm:
+                    quadro = _quadro_tempestade(tempestade, t)
+                else:
+                    quadro = abertura.quadro(t - t_storm)
                 sys.stdout.write(quadro.ansi(anterior))
                 sys.stdout.flush()
                 anterior = quadro
-                if t > DURACAO + 0.9 or teclado.apertou():
+                if t - t_storm > DURACAO + 0.9 or teclado.apertou():
                     break
                 time.sleep(max(0.0, 1 / QPS - (time.time() - inicio - t)))
     except KeyboardInterrupt:
