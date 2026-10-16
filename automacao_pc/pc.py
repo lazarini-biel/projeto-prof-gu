@@ -26,7 +26,7 @@ import subprocess
 import sys
 import time
 
-from ferramentas import (agendador, discos, duplicados, energia, inicio, intro, limpeza,
+from ferramentas import (agendador, clima, discos, duplicados, energia, inicio, intro, limpeza,
                          foco, inicializacao, movimentos, notas, organizar, painel_web, rede,
                          remoto, sistema, tema)
 from ferramentas.categorias import montar_mapa
@@ -172,6 +172,10 @@ def cmd_rede(cfg, args):
     rede.dispositivos()
 
 
+def cmd_clima(cfg, args):
+    clima.mostrar(cfg)
+
+
 def cmd_temp(cfg, args):
     sistema.temperatura_cmd()
 
@@ -297,6 +301,9 @@ def montar_parser():
     s.add_argument("resto", nargs="*")
     s.set_defaults(func=cmd_notas)
 
+    s = sub.add_parser("clima", help="clima e manchetes do dia")
+    s.set_defaults(func=cmd_clima)
+
     s = sub.add_parser("temp", help="temperaturas (CPU/GPU/placa, quando disponível)")
     s.set_defaults(func=cmd_temp)
 
@@ -340,6 +347,7 @@ _TITULOS_CMD = {
     "top": "Top processos", "painel": "Painel no navegador", "pastas": "Espaço por pasta",
     "fechar": "Liberar memória", "internet": "Teste de internet", "rede": "Dispositivos na rede",
     "notas": "Lembretes / notas", "foco": "Modos de foco", "atualizar": "Atualizar programas",
+    "clima": "Clima e notícias",
     "downloads": "Downloads antigos", "temp": "Temperaturas", "inicializar": "Inicialização",
 }
 
@@ -349,7 +357,7 @@ def rodar(cfg, parser, argv, perguntar, topo=True):
     (ou, sem ninguém no teclado, mostra o comando completo para aplicar)."""
     if topo and argv and argv[0] not in (
             "sistema", "top", "fechar", "internet", "rede", "notas",
-            "foco", "atualizar", "downloads", "temp", "inicializar"):   # têm cabeçalho próprio
+            "foco", "atualizar", "downloads", "temp", "inicializar", "clima"):   # têm cabeçalho
         tema.cabecalho(_TITULOS_CMD.get(argv[0], argv[0]))
         print()
     args = parser.parse_args(argv)
@@ -380,6 +388,7 @@ MENU = [
     ("Testar internet", ["internet"]),
     ("Dispositivos na rede", ["rede"]),
     ("Lembretes / notas", ["notas"]),
+    ("Clima e notícias do dia", ["clima"]),
     ("Organizar a pasta Downloads", ["organizar"]),
     ("Procurar arquivos duplicados", ["duplicados"]),
     ("Ver espaço dos discos", ["discos"]),
@@ -401,8 +410,19 @@ def menu(cfg, parser):
         intro.executar(cfg.get("agendamentos", []), cfg=cfg)
     rotulos = [rotulo for rotulo, _ in MENU]
     selecao = 0
+    extra = [""]
+    if cfg.get("clima", {}).get("na_abertura", True):
+        import threading
+        def _buscar():
+            try:
+                r = clima.resumo_curto(cfg)
+                if r:
+                    extra[0] = "  " + r
+            except Exception:
+                pass
+        threading.Thread(target=_buscar, daemon=True).start()
     while True:
-        selecao = intro.menu_animado(rotulos, selecao)
+        selecao = intro.menu_animado(rotulos, selecao, extra=extra)
         if selecao is None:
             return
         rotulo, argv = MENU[selecao]

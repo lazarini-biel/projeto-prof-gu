@@ -87,6 +87,12 @@ py pc.py rede
 ```
 Lista os aparelhos que seu PC enxergou na rede local (IP e MAC).
 
+### Clima e notícias
+```
+py pc.py clima
+```
+Mostra a previsão de hoje (descobre a cidade pelo seu IP, ou fixe em `config.json` > `clima`) e as manchetes do dia. Uma linha curta (clima + 1 manchete) aparece na abertura do menu; desligue com `"na_abertura": false`.
+
 ### Lembretes / notas
 ```
 py pc.py notas                 lista as notas

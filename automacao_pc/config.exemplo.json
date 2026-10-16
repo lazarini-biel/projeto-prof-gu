@@ -99,6 +99,14 @@
     "dormir": {"fechar": ["*"], "desligar_em_min": 30, "mensagem": "Boa noite 🌙"}
   },
 
+  "clima": {
+    "na_abertura": true,
+    "cidade": "",
+    "lat": null,
+    "lon": null,
+    "noticias_rss": "https://news.google.com/rss?hl=pt-BR&gl=BR&ceid=BR:pt-419"
+  },
+
   "espaco_pastas": {
     "onde": ["%USERPROFILE%", "C:/"],
     "quantidade": 80,

@@ -659,9 +659,10 @@ def executar(tarefas=(), popups=True, cfg=None):
 class _MenuArte:
     """Fundo animado e painel central do menu."""
 
-    def __init__(self, largura, altura, opcoes):
+    def __init__(self, largura, altura, opcoes, extra=None):
         self.l, self.a = largura, altura
         self.opcoes = opcoes
+        self.extra = extra
         self.rng = random.Random()
         self.gotas = []
         # painel central (título grande ocupa 7 linhas)
@@ -754,6 +755,9 @@ class _MenuArte:
         self._chuva(q, t)
         self._widgets(q, t)
         self._painel(q, t, selecao)
+        if self.extra and self.extra[0]:          # clima/manchete em segundo plano
+            linha = self.extra[0][: self.l - 24]
+            q.escrever((self.l - len(linha)) // 2, self.py - 1, linha, ROSA)
         return q
 
 
@@ -771,7 +775,7 @@ def _menu_simples(opcoes):
     return None if int(escolha) == 0 else int(escolha) - 1
 
 
-def menu_animado(opcoes, selecao=0):
+def menu_animado(opcoes, selecao=0, extra=None):
     """Mostra o menu animado e devolve o índice escolhido (0-based) ou None (sair)."""
     tty = (sys.stdout is not None and sys.stdout.isatty()
            and sys.stdin is not None and sys.stdin.isatty())
@@ -784,7 +788,7 @@ def menu_animado(opcoes, selecao=0):
         except OSError:
             pass
         colunas, linhas = shutil.get_terminal_size((120, 36))
-    arte = _MenuArte(colunas - 1, linhas, opcoes)
+    arte = _MenuArte(colunas - 1, linhas, opcoes, extra=extra)
     selecao = max(0, min(selecao, len(opcoes) - 1))
 
     sys.stdout.write("\x1b[?1049h\x1b[?25l")
