@@ -27,7 +27,7 @@ import sys
 import time
 
 from ferramentas import (agendador, discos, duplicados, energia, inicio, intro, limpeza,
-                         movimentos, organizar, remoto, sistema, tema)
+                         movimentos, organizar, painel_web, remoto, sistema, tema)
 from ferramentas.categorias import montar_mapa
 from ferramentas.util import PASTA_LOGS, caminho, carregar_config
 
@@ -39,6 +39,12 @@ def _log_sem_console():
         arquivo = open(PASTA_LOGS / "sparta.log", "a", encoding="utf-8", buffering=1)
         sys.stdout = sys.stderr = arquivo
         print(f"\n=== {time.strftime('%d/%m/%Y %H:%M:%S')} — {' '.join(sys.argv[1:])}")
+
+
+class _ns:
+    """Namespace simples para reusar cmd_discos a partir de outro subcomando."""
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
 
 
 def cmd_organizar(cfg, args):
@@ -76,6 +82,11 @@ def cmd_discos(cfg, args):
         return discos.redistribuir(cfg.get("redistribuir", {}),
                                    montar_mapa(cfg.get("categorias_extras")),
                                    aplicar=args.executar, saida=tema.saida)
+    elif args.acao == "pastas":
+        c = cfg.get("espaco_pastas", {})
+        alvo = args.pastas or c.get("onde", ["~"])
+        discos.maiores_pastas([caminho(p) for p in alvo], top=c.get("quantidade", 80),
+                              tamanho_min_mb=c.get("minimo_mb", 20), saida=tema.saida)
     else:
         discos.relatorio(saida=tema.saida)
 
@@ -140,6 +151,14 @@ def cmd_sistema(cfg, args):
     sistema.relatorio()
 
 
+def cmd_top(cfg, args):
+    sistema.top()
+
+
+def cmd_painel(cfg, args):
+    painel_web.iniciar(porta=cfg.get("painel_web", {}).get("porta", 0))
+
+
 def montar_parser():
     p = argparse.ArgumentParser(prog="pc.py", description="Central de automações do PC.")
     sub = p.add_subparsers(dest="comando")
@@ -156,7 +175,7 @@ def montar_parser():
     s.set_defaults(func=cmd_duplicados)
 
     s = sub.add_parser("discos", help="espaço, maiores arquivos e redistribuição")
-    s.add_argument("acao", nargs="?", choices=["relatorio", "maiores", "redistribuir"],
+    s.add_argument("acao", nargs="?", choices=["relatorio", "maiores", "redistribuir", "pastas"],
                    default="relatorio")
     s.add_argument("pastas", nargs="*")
     s.add_argument("--top", type=int, default=30)
@@ -193,6 +212,16 @@ def montar_parser():
 
     s = sub.add_parser("sistema", help="mostra informações do PC (CPU, memória, discos...)")
     s.set_defaults(func=cmd_sistema)
+
+    s = sub.add_parser("top", help="processos que mais usam CPU/memória agora")
+    s.set_defaults(func=cmd_top)
+
+    s = sub.add_parser("pastas", help="as pastas que mais ocupam espaço")
+    s.add_argument("pastas", nargs="*")
+    s.set_defaults(func=lambda cfg, a: cmd_discos(cfg, _ns(acao="pastas", pastas=a.pastas)))
+
+    s = sub.add_parser("painel", help="abre o painel do PC no navegador")
+    s.set_defaults(func=cmd_painel)
     return p
 
 
@@ -212,13 +241,14 @@ _TITULOS_CMD = {
     "discos": "Discos", "limpar": "Limpeza", "iniciar": "Abrir programas e sites",
     "energia": "Energia", "agendar": "Tarefas automáticas", "desfazer": "Desfazer",
     "remoto": "Controle remoto", "sistema": "Informações do PC",
+    "top": "Top processos", "painel": "Painel no navegador", "pastas": "Espaço por pasta",
 }
 
 
 def rodar(cfg, parser, argv, perguntar, topo=True):
     """Roda um comando. Se foi só uma prévia com algo a fazer, pergunta se aplica
     (ou, sem ninguém no teclado, mostra o comando completo para aplicar)."""
-    if topo and argv and argv[0] != "sistema":   # sistema tem cabeçalho próprio
+    if topo and argv and argv[0] not in ("sistema", "top"):   # têm cabeçalho próprio
         tema.cabecalho(_TITULOS_CMD.get(argv[0], argv[0]))
         print()
     args = parser.parse_args(argv)
@@ -241,10 +271,13 @@ def _tem_teclado():
 
 MENU = [
     ("Ver informações do PC", ["sistema"]),
+    ("Top processos (quem usa CPU/RAM)", ["top"]),
+    ("Painel do PC no navegador", ["painel"]),
     ("Organizar a pasta Downloads", ["organizar"]),
     ("Procurar arquivos duplicados", ["duplicados"]),
     ("Ver espaço dos discos", ["discos"]),
     ("Ver os maiores arquivos", ["discos", "maiores"]),
+    ("Espaço por pasta (o que enche o disco)", ["discos", "pastas"]),
     ("Redistribuir arquivos entre os discos", ["discos", "redistribuir"]),
     ("Limpar temporários e caches", ["limpar"]),
     ("Abrir meus programas e sites", ["iniciar", "padrao", "--agora"]),

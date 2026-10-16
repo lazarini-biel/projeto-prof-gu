@@ -162,3 +162,23 @@ def relatorio(saida=None):
                    f"{tema.realce(f'{uso:5.0%}')}  "
                    f"{tema.cor('livre', tema.CINZA)} {tema.realce(tamanho_legivel(livre))} "
                    f"{tema.cor('de ' + tamanho_legivel(total), tema.CINZA)}")
+
+
+def top(saida=None, n=15):
+    """Mini-htop: uso de CPU/RAM e os processos que mais consomem memória."""
+    from .util import cpu_percent, processos_detalhados
+    cpu = cpu_percent(0.2)
+    total, usada = memoria()
+    mem_frac = usada / total if total else 0
+    tema.cabecalho("Top processos", "uso do PC agora")
+    tema.saida(f"  {tema.cor('CPU', tema.CINZA)}  {tema.barra(cpu / 100, 30, aviso=cpu > 90)} "
+               f"{tema.realce(f'{cpu:4.1f}%')}")
+    tema.saida(f"  {tema.cor('RAM', tema.CINZA)}  {tema.barra(mem_frac, 30, aviso=mem_frac > 0.9)} "
+               f"{tema.realce(f'{mem_frac*100:4.1f}%')}  "
+               f"{tema.cor(f'{tamanho_legivel(usada)} / {tamanho_legivel(total)}', tema.CINZA)}")
+    tema.saida()
+    tema.saida(tema.cor(f"  {'PID':>7}  {'MEM%':>5}  {'MEMÓRIA':>9}  PROGRAMA", tema.VIVO))
+    for pid, nome, mem in processos_detalhados(n):
+        pct = mem / total * 100 if total else 0
+        tema.saida(f"  {tema.cor(f'{pid:>7}', tema.CINZA)}  {tema.realce(f'{pct:4.1f}%')}  "
+                   f"{tema.realce(f'{tamanho_legivel(mem):>9}')}  {nome}")

@@ -195,3 +195,57 @@ def redistribuir(cfg, mapa, aplicar=False, saida=print):
                 saida(f"  ... {i}/{len(plano)}")
     saida(f"\n{len(plano) - erros} arquivo(s) movidos. Para desfazer: py pc.py desfazer")
     return plano
+
+
+def tamanho_pastas(raizes, ignorar=()):
+    """{caminho: tamanho recursivo} de cada pasta sob as raízes."""
+    ignorar = PASTAS_IGNORADAS | {i.lower() for i in ignorar}
+    tam = defaultdict(int)
+    for raiz in raizes:
+        raiz = str(raiz)
+        for pasta, subpastas, arquivos in os.walk(raiz, topdown=True):
+            subpastas[:] = [d for d in subpastas
+                            if d.lower() not in ignorar and not d.startswith("$")
+                            and not eh_link_ou_juncao(os.path.join(pasta, d))]
+            proprio = 0
+            for nome in arquivos:
+                try:
+                    st = os.stat(os.path.join(pasta, nome), follow_symlinks=False)
+                    if not arquivo_intocavel(st):
+                        proprio += st.st_size
+                except OSError:
+                    continue
+            tam[pasta] += proprio
+            pai = os.path.dirname(pasta)       # soma no pai, subindo a árvore
+            while pai and len(pai) >= len(raiz):
+                tam[pai] += proprio
+                if pai == raiz:
+                    break
+                novo = os.path.dirname(pai)
+                if novo == pai:
+                    break
+                pai = novo
+    return tam
+
+
+def maiores_pastas(raizes, top=60, tamanho_min_mb=50, saida=print):
+    """Lista as pastas que mais ocupam espaço (as 'que comem o disco')."""
+    from . import tema
+    raizes = [str(Path(r)) for r in raizes if Path(r).is_dir()]
+    if not raizes:
+        saida("Nenhuma das pastas existe.")
+        return []
+    saida(tema.cor("Calculando o tamanho de cada pasta... (pode demorar)", tema.CINZA))
+    tam = tamanho_pastas(raizes)
+    minimo = tamanho_min_mb * 1024 * 1024
+    grandes = sorted(((t, p) for p, t in tam.items() if t >= minimo), reverse=True)[:top]
+    if not grandes:
+        saida("Nenhuma pasta acima do mínimo.")
+        return []
+    maior = grandes[0][0] or 1
+    saida(f"\n{tema.cor('As ' + str(len(grandes)) + ' pastas que mais ocupam espaço:', tema.VIVO)}\n")
+    for t, p in grandes:
+        nome = p if len(p) <= 58 else "…" + p[-57:]
+        saida(f"  {tema.barra(t / maior, 16)} {tema.realce(f'{tamanho_legivel(t):>9}')}  "
+              f"{tema.cor(nome, tema.CINZA)}")
+    return grandes

@@ -3,6 +3,7 @@ Funções comuns: configuração, formatação de tamanhos e detalhes do Windows
 """
 
 import getpass
+import time
 import json
 import os
 import platform
@@ -165,3 +166,39 @@ def processos_detalhados(limite=40):
     except OSError:
         pass
     return sorted(lista, key=lambda p: -p[2])[:limite]
+
+
+def _tempos_cpu():
+    """(ativo, total) de tempo de CPU, para calcular o uso em %."""
+    if WINDOWS:
+        import ctypes
+        from ctypes import wintypes
+
+        class FT(ctypes.Structure):
+            _fields_ = [("baixo", wintypes.DWORD), ("alto", wintypes.DWORD)]
+
+        ocioso, kernel, usuario = FT(), FT(), FT()
+        ctypes.windll.kernel32.GetSystemTimes(ctypes.byref(ocioso), ctypes.byref(kernel),
+                                              ctypes.byref(usuario))
+        def v(ft):
+            return (ft.alto << 32) | ft.baixo
+        idle = v(ocioso)
+        total = v(kernel) + v(usuario)      # kernel já inclui o ocioso
+        return total - idle, total
+    with open("/proc/stat") as f:
+        campos = [int(x) for x in f.readline().split()[1:]]
+    ocioso = campos[3] + (campos[4] if len(campos) > 4 else 0)
+    total = sum(campos)
+    return total - ocioso, total
+
+
+def cpu_percent(intervalo=0.15):
+    """Uso total de CPU em % (faz duas medições separadas por `intervalo`)."""
+    try:
+        a1, t1 = _tempos_cpu()
+        time.sleep(intervalo)
+        a2, t2 = _tempos_cpu()
+        dt = t2 - t1
+        return max(0.0, min(100.0, (a2 - a1) / dt * 100)) if dt > 0 else 0.0
+    except (OSError, KeyError, ValueError, IndexError):
+        return 0.0

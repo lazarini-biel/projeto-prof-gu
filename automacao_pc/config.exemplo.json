@@ -90,6 +90,16 @@
     {"nome": "Desligar de madrugada", "comando": "energia desligar --em 5", "quando": "diario", "hora": "01:30", "ativo": false}
   ],
 
+  "espaco_pastas": {
+    "onde": ["%USERPROFILE%", "C:/"],
+    "quantidade": 80,
+    "minimo_mb": 50
+  },
+
+  "painel_web": {
+    "porta": 0
+  },
+
   "remoto": {
     "token": "",
     "ids_autorizados": []

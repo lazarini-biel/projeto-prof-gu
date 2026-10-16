@@ -34,6 +34,25 @@ Na primeira vez ele cria o `config.json`. **Abra esse arquivo no Bloco de Notas 
 > Tudo que mexe em arquivos mostra primeiro uma **prévia** e só aplica com `--executar` (ou quando você responde "s" no menu).
 > Movimentações podem ser desfeitas com `py pc.py desfazer`.
 
+### Painel do PC no navegador
+```
+py pc.py painel
+```
+Abre no navegador um **painel ao vivo** do PC (CPU, memória, discos, processos, bateria) no tema vermelho — bem mais bonito que o terminal. Roda um servidor só no seu PC (127.0.0.1); feche a aba e dê Ctrl+C para parar.
+
+### Top processos
+```
+py pc.py top
+```
+Uso de CPU e RAM agora, e os programas que mais consomem memória.
+
+### Espaço por pasta
+```
+py pc.py discos pastas            as pastas que mais enchem o disco
+py pc.py discos pastas D:/ C:/Users
+```
+Mostra muitas pastas ordenadas por tamanho. Ajuste em `config.json` > `espaco_pastas` (onde procurar, quantas mostrar, tamanho mínimo).
+
 ### Ver informações do PC
 ```
 py pc.py sistema
