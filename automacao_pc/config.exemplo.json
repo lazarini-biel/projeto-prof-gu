@@ -1,0 +1,124 @@
+{
+  "abertura": true,
+  "cmds_reais": true,
+  "cmds_qtd": 18,
+  "cmds_segundos": 7,
+  "abertura_segundos": 14,
+
+  "_leia_me": "Este é o modelo. Na 1ª execução ele vira config.json — edite o config.json. Use barras normais (/) nas pastas; %USERPROFILE%, %LOCALAPPDATA% etc. funcionam.",
+
+  "organizar": {
+    "pasta": "%USERPROFILE%/Downloads",
+    "idade_minima_minutos": 10,
+    "separar_por_ano": false,
+    "mover_desconhecidos": true
+  },
+
+  "categorias_extras": {
+    "Projetos 3D": [".stl", ".obj", ".blend", ".3mf"]
+  },
+
+  "duplicados": {
+    "pastas": [
+      "%USERPROFILE%/Desktop",
+      "%USERPROFILE%/Documents",
+      "%USERPROFILE%/Downloads",
+      "%USERPROFILE%/Pictures",
+      "%USERPROFILE%/Videos",
+      "%USERPROFILE%/Music"
+    ],
+    "tamanho_minimo_kb": 100,
+    "preferir_manter_em": ["%USERPROFILE%/Pictures", "%USERPROFILE%/Documents"],
+    "ignorar_pastas": []
+  },
+
+  "redistribuir": {
+    "_leia_me": "Para onde vai cada tipo de arquivo. Troque D:/ e E:/ pelos seus discos. Tipos que não estiverem aqui ficam onde estão.",
+    "origens": [
+      "%USERPROFILE%/Desktop",
+      "%USERPROFILE%/Documents",
+      "%USERPROFILE%/Downloads",
+      "%USERPROFILE%/Pictures",
+      "%USERPROFILE%/Videos",
+      "%USERPROFILE%/Music"
+    ],
+    "destinos": {
+      "Imagens": "D:/Arquivos/Imagens",
+      "Vídeos": "D:/Arquivos/Vídeos",
+      "Músicas": "D:/Arquivos/Músicas",
+      "Imagens de disco": "D:/Arquivos/ISOs",
+      "Compactados": "D:/Arquivos/Compactados",
+      "Instaladores": "D:/Arquivos/Instaladores"
+    },
+    "manter": ["*.lnk", "*.url", "desktop.ini"],
+    "idade_minima_dias": 7,
+    "espaco_livre_minimo_pct": 10
+  },
+
+  "limpeza": {
+    "idade_minima_horas": 24,
+    "downloads_antigos_dias": 30,
+    "navegadores": true,
+    "sistema": false,
+    "esvaziar_lixeira": false
+  },
+
+  "inicio": {
+    "padrao": {
+      "atraso_segundos": 20,
+      "programas": [
+        {"caminho": "%APPDATA%/Spotify/Spotify.exe"}
+      ],
+      "sites": [
+        {"url": "https://mail.google.com", "navegador": "chrome"},
+        {"url": "https://web.whatsapp.com", "navegador": "chrome"}
+      ],
+      "pastas": []
+    },
+    "trabalho": {
+      "programas": [],
+      "sites": [{"url": "https://outlook.office.com", "navegador": "edge"}],
+      "pastas": ["%USERPROFILE%/Documents"]
+    }
+  },
+
+  "agendamentos": [
+    {"nome": "Abrir programas ao ligar", "comando": "iniciar padrao", "quando": "logon", "ativo": true},
+    {"nome": "Controle remoto Telegram", "comando": "remoto", "quando": "logon", "ativo": false},
+    {"nome": "Organizar Downloads", "comando": "organizar --executar", "quando": "a_cada_horas", "horas": 2, "ativo": true},
+    {"nome": "Limpeza semanal", "comando": "limpar --executar", "quando": "semanal", "dias": ["dom"], "hora": "12:00", "ativo": true},
+    {"nome": "Limpar Downloads antigos", "comando": "downloads --executar", "quando": "semanal", "dias": ["dom"], "hora": "12:10", "ativo": false},
+    {"nome": "Redistribuir arquivos", "comando": "discos redistribuir --executar", "quando": "semanal", "dias": ["sab"], "hora": "13:00", "ativo": false},
+    {"nome": "Desligar de madrugada", "comando": "energia desligar --em 5", "quando": "diario", "hora": "01:30", "ativo": false}
+  ],
+
+  "foco": {
+    "estudo": {"fechar": ["discord.exe", "steam.exe", "epicgameslauncher.exe", "spotify.exe"], "mensagem": "Bons estudos! 📚"},
+    "jogos":  {"fechar": ["chrome.exe", "msedge.exe", "teams.exe", "onedrive.exe"], "mensagem": "Modo jogos 🎮"},
+    "foco":   {"fechar": ["discord.exe", "spotify.exe", "steam.exe", "whatsapp.exe"], "mensagem": "Foco total 🎯"},
+    "dormir": {"fechar": ["*"], "desligar_em_min": 30, "mensagem": "Boa noite 🌙"}
+  },
+
+  "clima": {
+    "na_abertura": true,
+    "cidade": "",
+    "lat": null,
+    "lon": null,
+    "noticias_rss": "https://news.google.com/rss?hl=pt-BR&gl=BR&ceid=BR:pt-419"
+  },
+
+  "espaco_pastas": {
+    "onde": ["%USERPROFILE%", "C:/"],
+    "quantidade": 80,
+    "minimo_mb": 50
+  },
+
+  "painel_web": {
+    "porta": 0
+  },
+
+  "remoto": {
+    "token": "",
+    "ids_autorizados": []
+  }
+}

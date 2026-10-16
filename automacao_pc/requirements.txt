@@ -1,0 +1,4 @@
+# A central (pc.py) usa só a biblioteca padrão do Python.
+# Estes são para o cofre de senhas:
+cryptography>=42
+pywebview>=5.0
