@@ -3,6 +3,7 @@
 
 const $ = (s, r = document) => r.querySelector(s);
 let api = null;
+let observador = null;
 const estado = {
   pasta: null, itens: [], filtro: null, selecao: new Set(),
   historico: [], grade: false, ocultos: false, buscando: false,
@@ -95,7 +96,28 @@ function desenharFiltros() {
   for (const cat of cats.sort()) cont.append(chip(cat, cat));
 }
 
+function iconeEl(it) {
+  const d = el("div", { class: "ic", style: `background:${cor(it.categoria)}`, text: inicial(it.nome, it.pasta) });
+  d.dataset.caminho = it.caminho;
+  observador && observador.observe(d);
+  return d;
+}
+
 function desenharLista() {
+  if (observador) observador.disconnect();
+  observador = new IntersectionObserver((entradas) => {
+    for (const e of entradas) {
+      if (!e.isIntersecting) continue;
+      const d = e.target; observador.unobserve(d);
+      api.icone(d.dataset.caminho).then((r) => {
+        if (r && r.img && d.isConnected) {
+          d.textContent = "";
+          d.classList.add("tem-img");
+          d.append(el("img", { src: r.img, alt: "" }));
+        }
+      }).catch(() => {});
+    }
+  }, { root: $("#lista"), rootMargin: "120px" });
   const lista = $("#lista");
   lista.textContent = "";
   lista.classList.toggle("grade", estado.grade);
@@ -114,7 +136,7 @@ function desenharLista() {
       oncontextmenu: (ev) => { ev.preventDefault(); if (!estado.selecao.has(it.caminho)) selecionar(it, {}); menuContexto(ev, it); },
     },
       el("div", { class: "nome" },
-        el("div", { class: "ic", style: `background:${cor(it.categoria)}`, text: inicial(it.nome, it.pasta) }),
+        iconeEl(it),
         el("b", { text: it.nome })),
       el("span", { class: "cat", text: it.categoria }),
       el("span", { class: "tam", text: it.tamanho_fmt || "" }),

@@ -21,6 +21,8 @@ from pathlib import Path
 
 import webview
 
+import icones   # ícones reais (mesma pasta)
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # ferramentas/
 from ferramentas import organizar as _org          # noqa: E402
 from ferramentas.categorias import montar_mapa, OUTROS   # noqa: E402
@@ -149,6 +151,10 @@ class Api:
             except OSError as erro:
                 return {"ok": False, "erro": str(erro)}
         return {"ok": False}
+
+    def icone(self, caminho, tam=48):
+        """data:image/png do ícone real do arquivo (ou miniatura de imagem)."""
+        return {"img": icones.para_web(caminho, int(tam))}
 
     def nova_pasta(self, pasta, nome):
         nome = (nome or "").strip().strip(". ")

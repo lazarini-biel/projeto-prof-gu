@@ -222,7 +222,7 @@ Mensagens de qualquer ID fora da lista são ignoradas. Comandos enviados com o P
 ```
 Dois cliques em explorador/Explorador.bat   (ou: py pc.py explorador)
 ```
-Um explorador no estilo SPARTA (vermelho), ligado ao Windows: navegar pelos discos e pastas, **filtrar/colorir por categoria**, **organizar a pasta por tipo** num clique, **renomear**, **mover**, **excluir** (vai para a Lixeira), criar pasta e **buscar**. Clique duplo abre o arquivo no programa padrão. **F11** alterna tela cheia.
+Um explorador no estilo SPARTA (vermelho), ligado ao Windows: navegar pelos discos e pastas, **filtrar/colorir por categoria**, **organizar a pasta por tipo** num clique, **renomear**, **mover**, **excluir** (vai para a Lixeira), criar pasta e **buscar**. Clique duplo abre o arquivo no programa padrão. **F11** alterna tela cheia. Mostra os **ícones reais** dos arquivos (WinRAR, Word, PDF…) e **miniatura das imagens** — para isso precisa do Pillow: `py -m pip install pillow`.
 
 Para levar como atalho/.exe: `explorador/gerar_exe.bat`.
 

@@ -6,3 +6,6 @@ pywebview>=5.0
 # Só para o Mixer de volume (controle de áudio do Windows):
 pycaw>=20230407
 comtypes>=1.2
+
+# Só para os ícones reais / miniaturas no Explorador:
+pillow>=10
