@@ -31,35 +31,35 @@ py -m pip install --upgrade pyinstaller pywebview cryptography pycaw comtypes pi
 echo.
 echo  [2/6] Construindo a CENTRAL (SPARTA.exe)...
 py -m PyInstaller --noconfirm --clean --onefile --name SPARTA ^
-  --icon "assets\sparta.ico" ^
+  --icon "%RAIZ%\assets\sparta.ico" --paths "%RAIZ%" ^
   --distpath "%DIST%" --workpath "%BUILD%\sparta" --specpath "%BUILD%" ^
-  --add-data "config.exemplo.json;." ^
-  pc.py || goto erro
+  --add-data "%RAIZ%\config.exemplo.json;." ^
+  "%RAIZ%\pc.py" || goto erro
 
 echo.
 echo  [3/6] Construindo o COFRE (Cofre.exe)...
 py -m PyInstaller --noconfirm --clean --onefile --windowed --name Cofre ^
-  --icon "assets\cofre.ico" --paths . ^
+  --icon "%RAIZ%\assets\cofre.ico" --paths "%RAIZ%" ^
   --distpath "%DIST%" --workpath "%BUILD%\cofre" --specpath "%BUILD%" ^
-  --add-data "cofre\ui;ui" ^
-  --add-data "cofre\nucleo.py;." --add-data "cofre\autotipo.py;." --add-data "cofre\cofre.py;." ^
-  cofre\cofre.py || goto erro
+  --add-data "%RAIZ%\cofre\ui;ui" ^
+  --add-data "%RAIZ%\cofre\nucleo.py;." --add-data "%RAIZ%\cofre\autotipo.py;." --add-data "%RAIZ%\cofre\cofre.py;." ^
+  "%RAIZ%\cofre\cofre.py" || goto erro
 
 echo.
 echo  [4/6] Construindo o EXPLORADOR (Explorador.exe)...
 py -m PyInstaller --noconfirm --clean --onefile --windowed --name Explorador ^
-  --icon "assets\explorador.ico" --paths . ^
+  --icon "%RAIZ%\assets\explorador.ico" --paths "%RAIZ%" ^
   --distpath "%DIST%" --workpath "%BUILD%\explorador" --specpath "%BUILD%" ^
-  --add-data "explorador\ui;ui" --add-data "explorador\icones.py;." ^
-  explorador\explorador.py || goto erro
+  --add-data "%RAIZ%\explorador\ui;ui" --add-data "%RAIZ%\explorador\icones.py;." ^
+  "%RAIZ%\explorador\explorador.py" || goto erro
 
 echo.
 echo  [5/6] Construindo o MIXER (Mixer.exe)...
 py -m PyInstaller --noconfirm --clean --onefile --windowed --name Mixer ^
-  --icon "assets\mixer.ico" --paths . ^
+  --icon "%RAIZ%\assets\mixer.ico" --paths "%RAIZ%" ^
   --distpath "%DIST%" --workpath "%BUILD%\mixer" --specpath "%BUILD%" ^
-  --add-data "mixer\ui;ui" ^
-  mixer\mixer.py || goto erro
+  --add-data "%RAIZ%\mixer\ui;ui" ^
+  "%RAIZ%\mixer\mixer.py" || goto erro
 
 echo.
 echo  [6/6] Criando os atalhos na Area de Trabalho...
