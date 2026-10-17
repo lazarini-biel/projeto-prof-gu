@@ -88,7 +88,9 @@ class Api:
         except Exception:
             cfg = {}
         inicio = self._inicio or cfg.get("explorador", {}).get("pasta_inicial", "~")
-        return {"windows": WINDOWS, "inicio": str(_caminho(inicio))}
+        ok, motivo = icones.disponivel()
+        return {"windows": WINDOWS, "inicio": str(_caminho(inicio)),
+                "icones_ok": ok, "icones_motivo": motivo}
 
     def locais(self):
         """Atalhos: pastas do usuário + discos."""

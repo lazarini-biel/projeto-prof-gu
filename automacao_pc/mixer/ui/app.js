@@ -27,8 +27,10 @@ function corApp(nome) {
 }
 
 /* --------------------------------------------------- canal (strip) */
-function canal({ id, nome, cor, volume, mudo, boost, master }) {
-  const icone = el("div", { class: "icone", style: `background:${cor}`, text: (nome.trim()[0] || "?").toUpperCase() });
+function canal({ id, nome, cor, volume, mudo, boost, master, logo }) {
+  const icone = logo
+    ? el("div", { class: "icone tem-img" }, el("img", { src: logo, alt: "" }))
+    : el("div", { class: "icone", style: `background:${cor}`, text: (nome.trim()[0] || "?").toUpperCase() });
   const pct = el("div", { class: "pct", text: volume + "%" });
   const boostnum = el("div", { class: "boostnum", text: boost > 100 ? "boost " + boost + "%" : "" });
 
@@ -95,7 +97,7 @@ async function atualizar() {
     mesa.append(el("div", { class: "vazio", text: "Nenhum app tocando som agora.\nAbra um player/jogo/navegador com áudio." }));
   }
   for (const s of r.sessoes)
-    mesa.append(canal({ id: s.exe || s.id, nome: s.nome, cor: corApp(s.nome),
+    mesa.append(canal({ id: s.exe || s.id, nome: s.nome, cor: corApp(s.nome), logo: s.icone,
       volume: s.volume, mudo: s.mudo, boost: s.boost || 100 }));
   $("#rodape").textContent = `${r.sessoes.length} app(s) com áudio`;
 }
@@ -115,6 +117,7 @@ async function iniciar() {
     banner.append(el("span", { text: "Para passar de 100% o volume, instale o Equalizer APO (gratuito). O volume 0–100%, geral e mudo já funcionam sem ele." }),
       el("button", { text: "Baixar Equalizer APO", onclick: () => api.abrir_eqapo() }));
   }
+  if (st.icones_ok === false && st.icones_motivo) aviso(st.icones_motivo, "info");
   $("#bt-atualizar").onclick = atualizar;
   $("#bt-tela-cheia").onclick = () => api.alternar_tela_cheia();
   $("#bt-sair").onclick = () => api.sair();

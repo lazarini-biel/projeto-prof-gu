@@ -40,6 +40,8 @@ button { cursor: pointer; font: inherit; color: inherit; }
 .canal.master { border-color: var(--neon); box-shadow: 0 0 30px -10px rgba(255,51,85,.7); }
 .canal .icone { width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center;
   font: 700 17px var(--mono); color: #140609; margin-bottom: 8px; }
+.canal .icone.tem-img { background: transparent !important; }
+.canal .icone img { width: 100%; height: 100%; object-fit: contain; }
 .canal .nome { font-size: 13px; font-weight: 600; text-align: center; height: 34px; overflow: hidden;
   display: flex; align-items: center; text-align: center; line-height: 1.15; }
 .canal .pct { font: 700 18px var(--mono); margin: 6px 0 2px; }

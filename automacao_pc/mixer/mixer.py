@@ -22,6 +22,7 @@ import webview
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # ferramentas/
 from ferramentas.util import WINDOWS   # noqa: E402
+from ferramentas import iconewin        # noqa: E402  (ícones reais dos apps)
 
 TITULO = "SPARTA // MIXER"
 
@@ -81,11 +82,29 @@ class Api:
     def __init__(self):
         self._janela = None
         self._eqapo = _eqapo_config() if WINDOWS else None
+        self._cache_icone = {}       # caminho do .exe -> data uri (ou None)
 
     # ------------------------------------------------------------ estado
     def estado(self):
+        ic_ok, ic_motivo = iconewin.disponivel()
         return {"windows": WINDOWS, "eqapo": bool(self._eqapo),
-                "pycaw": self._tem_pycaw(), "boost": self._boost_atual()}
+                "pycaw": self._tem_pycaw(), "boost": self._boost_atual(),
+                "icones_ok": ic_ok, "icones_motivo": ic_motivo}
+
+    def _icone_do_proc(self, proc):
+        """data uri do ícone do app (pelo caminho do .exe), com cache."""
+        if not proc:
+            return None
+        try:
+            caminho = proc.exe()
+        except Exception:
+            return None
+        if caminho not in self._cache_icone:
+            try:
+                self._cache_icone[caminho] = iconewin.para_web(caminho, 48)
+            except Exception:
+                self._cache_icone[caminho] = None
+        return self._cache_icone[caminho]
 
     def _tem_pycaw(self):
         if not WINDOWS:
@@ -124,12 +143,20 @@ class Api:
             for s in AudioUtilities.GetAllSessions():
                 ctl = s._ctl.QueryInterface(ISimpleAudioVolume)
                 proc = getattr(s, "Process", None)
-                nome = (proc.name() if proc else None) or s.DisplayName or "Sistema"
                 exe = proc.name() if proc else ""
+                if exe:
+                    nome = exe[:-4].title() if exe.lower().endswith(".exe") else exe.title()
+                    icone = self._icone_do_proc(proc)
+                else:
+                    # sessão sem processo = sons do próprio Windows
+                    # (o DisplayName costuma vir como "@%SystemRoot%\\System32\\...").
+                    nome = "Sons do sistema"
+                    icone = None
                 itens.append({
                     "id": exe or nome,
                     "exe": exe,
-                    "nome": nome.replace(".exe", "").title() if exe else nome,
+                    "nome": nome,
+                    "icone": icone,
                     "pid": proc.pid if proc else 0,
                     "volume": round(ctl.GetMasterVolume() * 100),
                     "mudo": bool(ctl.GetMute()),

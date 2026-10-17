@@ -6,8 +6,35 @@ let api = null;
 let observador = null;
 const estado = {
   pasta: null, itens: [], filtro: null, selecao: new Set(),
-  historico: [], grade: false, ocultos: false, buscando: false,
+  historico: [], grade: false, ocultos: false, buscando: false, zoom: 1,
 };
+
+/* níveis de zoom: ic = ícone na lista, gic = ícone na grade, cel = célula da grade */
+const ZOOM = [
+  { ic: 22, gic: 44, cel: 118 },
+  { ic: 28, gic: 60, cel: 150 },   // padrão
+  { ic: 36, gic: 84, cel: 190 },
+  { ic: 48, gic: 110, cel: 240 },
+  { ic: 64, gic: 150, cel: 310 },
+];
+function nivelZoom() { return ZOOM[estado.zoom] || ZOOM[1]; }
+function tamIcone() { const z = nivelZoom(); return Math.round(estado.grade ? z.gic : z.ic); }
+
+function aplicarZoom(redesenhar) {
+  const z = nivelZoom();
+  const lista = $("#lista");
+  lista.style.setProperty("--ic", z.ic + "px");
+  lista.style.setProperty("--gic", z.gic + "px");
+  lista.style.setProperty("--cel", z.cel + "px");
+  try { localStorage.setItem("sparta-zoom", estado.zoom); } catch (e) { /* ok */ }
+  if (redesenhar) desenharLista();     // re-pede os ícones no novo tamanho
+}
+function mudarZoom(delta) {
+  const novo = Math.max(0, Math.min(ZOOM.length - 1, estado.zoom + delta));
+  if (novo === estado.zoom) return;
+  estado.zoom = novo;
+  aplicarZoom(true);
+}
 
 const CORES = {
   Pasta: "#ffb020", PDFs: "#ff4d4d", Imagens: "#ff3d7f", Vídeos: "#c850ff",
@@ -109,7 +136,7 @@ function desenharLista() {
     for (const e of entradas) {
       if (!e.isIntersecting) continue;
       const d = e.target; observador.unobserve(d);
-      api.icone(d.dataset.caminho).then((r) => {
+      api.icone(d.dataset.caminho, Math.max(32, tamIcone() * 2)).then((r) => {
         if (r && r.img && d.isConnected) {
           d.textContent = "";
           d.classList.add("tem-img");
@@ -309,6 +336,13 @@ function ligar() {
   $("#bt-mover").onclick = moverSelecao;
   $("#bt-excluir").onclick = excluirSelecao;
   $("#bt-visao").onclick = () => { estado.grade = !estado.grade; desenharLista(); };
+  $("#bt-zoom-mais").onclick = () => mudarZoom(+1);
+  $("#bt-zoom-menos").onclick = () => mudarZoom(-1);
+  $("#lista").addEventListener("wheel", (ev) => {
+    if (!ev.ctrlKey) return;              // Ctrl + roda = zoom
+    ev.preventDefault();
+    mudarZoom(ev.deltaY < 0 ? +1 : -1);
+  }, { passive: false });
   $("#mostrar-ocultos").onchange = (e) => { estado.ocultos = e.target.checked; desenharLista(); };
   $("#busca").oninput = aoBuscar;
   $("#bt-tela-cheia").onclick = () => api?.alternar_tela_cheia();
@@ -322,14 +356,20 @@ function ligar() {
     else if (ev.key === "F2" && estado.selecao.size === 1) renomearSelecao();
     else if (ev.altKey && ev.key === "ArrowLeft") voltar();
     else if (ev.altKey && ev.key === "ArrowUp" && estado.pai) ir(estado.pai);
+    else if (ev.ctrlKey && (ev.key === "+" || ev.key === "=")) { ev.preventDefault(); mudarZoom(+1); }
+    else if (ev.ctrlKey && ev.key === "-") { ev.preventDefault(); mudarZoom(-1); }
+    else if (ev.ctrlKey && ev.key === "0") { ev.preventDefault(); estado.zoom = 1; aplicarZoom(true); }
   });
 }
 
 async function iniciar() {
   api = window.pywebview.api;
+  try { const z = parseInt(localStorage.getItem("sparta-zoom"), 10); if (!isNaN(z)) estado.zoom = Math.max(0, Math.min(ZOOM.length - 1, z)); } catch (e) { /* ok */ }
   ligar();
+  aplicarZoom(false);
   await desenharLateral();
   const st = await api.estado();
+  if (st && st.icones_ok === false && st.icones_motivo) aviso(st.icones_motivo, "info");
   ir(st.inicio);
 }
 if (window.pywebview && window.pywebview.api) iniciar();

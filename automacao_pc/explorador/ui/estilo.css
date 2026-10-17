@@ -29,6 +29,10 @@ button { cursor: pointer; }
 .busca input { width: 240px; padding: 7px 11px; border-radius: 6px; border: 1px solid var(--borda);
   background: rgba(0,0,0,.35); outline: none; }
 .busca input:focus { border-color: var(--neon); box-shadow: 0 0 0 3px rgba(255,51,85,.12); }
+.zoom { display: flex; gap: 4px; }
+.zoom button { width: 34px; height: 30px; border-radius: 6px; border: 1px solid var(--borda);
+  background: rgba(255,255,255,.03); font: 700 12px var(--mono); }
+.zoom button:hover { border-color: var(--neon); color: #fff; background: rgba(255,51,85,.1); }
 .janela-botoes { display: flex; gap: 6px; }
 .janela-botoes button { width: 30px; height: 28px; border-radius: 6px; border: 1px solid var(--borda);
   background: rgba(0,0,0,.3); color: var(--apagado); }
@@ -71,7 +75,7 @@ button { cursor: pointer; }
 .cabecalho-lista { display: grid; grid-template-columns: 1fr 140px 110px 160px; gap: 8px; padding: 7px 16px;
   font: 11px var(--mono); letter-spacing: .1em; color: var(--apagado); border-bottom: 1px solid var(--borda); }
 .lista { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; outline: none; }
-.lista.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+.lista.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--cel, 140px), 1fr));
   gap: 10px; padding: 14px; align-content: start; }
 .cabecalho-lista.escondido { display: none; }
 
@@ -80,7 +84,7 @@ button { cursor: pointer; }
 .item:hover { background: rgba(255,51,85,.06); }
 .item.sel { background: rgba(255,51,85,.16); box-shadow: inset 2px 0 0 var(--neon); }
 .item .nome { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.item .ic { flex: none; width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center;
+.item .ic { flex: none; width: var(--ic, 28px); height: var(--ic, 28px); border-radius: 7px; display: grid; place-items: center;
   font: 700 12px var(--mono); color: #140609; }
 .item .nome b { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .item .cat, .item .tam, .item .data { font: 12px var(--mono); color: var(--apagado); }
@@ -90,7 +94,7 @@ button { cursor: pointer; }
   padding: 14px 8px; border: 1px solid transparent; border-radius: 10px; border-bottom: 1px solid transparent; }
 .lista.grade .item:hover { background: rgba(255,51,85,.06); border-color: var(--borda); }
 .lista.grade .item.sel { border-color: var(--neon); box-shadow: 0 0 0 1px var(--neon); }
-.lista.grade .ic { width: 52px; height: 52px; font-size: 20px; border-radius: 12px; }
+.lista.grade .ic { width: var(--gic, 52px); height: var(--gic, 52px); font-size: 20px; border-radius: 12px; }
 .lista.grade .nome b { white-space: normal; word-break: break-word; font-size: 13px; }
 .lista.grade .cat, .lista.grade .tam, .lista.grade .data { display: none; }
 
