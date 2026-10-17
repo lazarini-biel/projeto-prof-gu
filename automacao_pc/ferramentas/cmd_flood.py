@@ -103,6 +103,13 @@ def abrir(quantidade, duracao, rng=None):
         return None
 
     exe = sys.executable or "python"
+    if getattr(sys, "frozen", False):
+        # empacotado (.exe): sys.executable é o SPARTA.exe e não aceita "-c".
+        # procura um Python de verdade; sem ele, cai no efeito do terminal.
+        import shutil
+        exe = shutil.which("python") or shutil.which("py") or ""
+        if not exe:
+            return None
     # usa python.exe (com console), nunca pythonw.exe (sem stdout → janela preta)
     if exe.lower().endswith("pythonw.exe"):
         cand = exe[:-len("pythonw.exe")] + "python.exe"

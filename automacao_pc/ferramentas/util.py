@@ -13,7 +13,25 @@ import subprocess
 import sys
 from pathlib import Path
 
-PASTA_BASE = Path(__file__).resolve().parent.parent
+def _pasta_base():
+    """Pasta onde ficam config.json/logs: ao lado do .exe quando empacotado
+    (PyInstaller), senão a raiz do projeto."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent.parent
+
+
+def _exemplo_config():
+    """O config.exemplo.json: embutido no .exe (_MEIPASS) ou na raiz do projeto."""
+    base = getattr(sys, "_MEIPASS", None)
+    if base:
+        embutido = Path(base) / "config.exemplo.json"
+        if embutido.exists():
+            return embutido
+    return PASTA_BASE / "config.exemplo.json"
+
+
+PASTA_BASE = _pasta_base()
 ARQUIVO_CONFIG = PASTA_BASE / "config.json"
 EXEMPLO_CONFIG = PASTA_BASE / "config.exemplo.json"
 PASTA_LOGS = PASTA_BASE / "logs"
@@ -24,7 +42,7 @@ def carregar_config(arquivo=ARQUIVO_CONFIG):
     """Lê o config.json. Na primeira vez, cria a partir do exemplo."""
     arquivo = Path(arquivo)
     if not arquivo.exists():
-        shutil.copyfile(EXEMPLO_CONFIG, arquivo)
+        shutil.copyfile(_exemplo_config(), arquivo)
         print(f"Criei {arquivo} a partir do exemplo. Abra e ajuste para o seu PC.\n")
     with open(arquivo, encoding="utf-8") as f:
         return json.load(f)

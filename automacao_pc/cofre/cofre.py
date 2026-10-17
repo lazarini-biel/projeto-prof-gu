@@ -33,6 +33,22 @@ import nucleo   # noqa: E402
 TITULO = "SPARTA // COFRE"
 
 
+def _recurso(rel):
+    """Caminho de um recurso (ui/), funcionando empacotado (.exe) ou como script."""
+    import os
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, rel)
+
+
+def _identidade_windows():
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("SPARTA.Cofre")
+        except OSError:
+            pass
+
+
 def pasta_do_programa():
     """Ao lado do .exe (pendrive) ou ao lado deste script."""
     if getattr(sys, "frozen", False):
@@ -377,11 +393,12 @@ class Api:
 
 
 def main():
+    _identidade_windows()
     opcoes = [a for a in sys.argv[1:] if a.startswith("--")]
     caminhos = [a for a in sys.argv[1:] if not a.startswith("--")]
     arquivo = Path(caminhos[0]) if caminhos else pasta_do_programa() / "cofre.dat"
     api = Api(nucleo.Cofre(arquivo), abertura="--sem-abertura" not in opcoes)
-    janela = webview.create_window(TITULO, "ui/index.html", js_api=api, width=1180, height=760,
+    janela = webview.create_window(TITULO, _recurso("ui/index.html"), js_api=api, width=1180, height=760,
                                    min_size=(900, 620), background_color="#070204",
                                    fullscreen="--janela" not in opcoes)
     api._janela = janela

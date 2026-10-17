@@ -177,13 +177,22 @@ def cmd_clima(cfg, args):
     clima.mostrar(cfg)
 
 
-def _abrir_app(pasta_rel, nome, extra=()):
-    script = _Path(__file__).resolve().parent / pasta_rel / nome
-    exe = sys.executable
-    pyw = exe[:-len("python.exe")] + "pythonw.exe" if exe.lower().endswith("python.exe") else exe
+def _abrir_app(pasta_rel, nome, exe_nome, extra=()):
+    """Abre um sub-app. Empacotado (.exe), chama o .exe irmão (ex.: Explorador.exe);
+    como script, roda o .py com o pythonw (sem console preto)."""
     import os
-    pyw = pyw if os.path.exists(pyw) else exe
     try:
+        if getattr(sys, "frozen", False):
+            alvo = _Path(sys.executable).resolve().parent / exe_nome
+            if not alvo.exists():
+                tema.saida(f"Não encontrei {exe_nome} ao lado do SPARTA.")
+                return False
+            subprocess.Popen([str(alvo), *extra])
+            return True
+        script = _Path(__file__).resolve().parent / pasta_rel / nome
+        exe = sys.executable
+        pyw = exe[:-len("python.exe")] + "pythonw.exe" if exe.lower().endswith("python.exe") else exe
+        pyw = pyw if os.path.exists(pyw) else exe
         subprocess.Popen([pyw, str(script), *extra])
         return True
     except OSError as erro:
@@ -192,21 +201,13 @@ def _abrir_app(pasta_rel, nome, extra=()):
 
 
 def cmd_mixer(cfg, args):
-    if _abrir_app("mixer", "mixer.py"):
+    if _abrir_app("mixer", "mixer.py", "Mixer.exe"):
         tema.saida("Abrindo o Mixer de volume...")
 
 
 def cmd_explorador(cfg, args):
-    script = _Path(__file__).resolve().parent / "explorador" / "explorador.py"
-    exe = sys.executable
-    pyw = exe[:-len("python.exe")] + "pythonw.exe" if exe.lower().endswith("python.exe") else exe
-    import os
-    pyw = pyw if os.path.exists(pyw) else exe
-    try:
-        subprocess.Popen([pyw, str(script), *(args.pasta or [])])
+    if _abrir_app("explorador", "explorador.py", "Explorador.exe", extra=tuple(args.pasta or [])):
         tema.saida("Abrindo o Explorador de arquivos...")
-    except OSError as erro:
-        tema.saida(f"Não consegui abrir: {erro}")
 
 
 def cmd_temp(cfg, args):

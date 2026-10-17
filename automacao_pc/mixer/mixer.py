@@ -25,6 +25,22 @@ from ferramentas.util import WINDOWS   # noqa: E402
 
 TITULO = "SPARTA // MIXER"
 
+
+def _recurso(rel):
+    """Caminho de um recurso (ui/), funcionando empacotado (.exe) ou como script."""
+    import os
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, rel)
+
+
+def _identidade_windows():
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("SPARTA.Mixer")
+        except OSError:
+            pass
+
 # ----------------------------------------------------------- Equalizer APO
 _EQAPO_CANDIDATOS = [
     r"C:\Program Files\EqualizerAPO\config\config.txt",
@@ -259,9 +275,10 @@ class Api:
 
 
 def main():
+    _identidade_windows()
     opcoes = [a for a in sys.argv[1:] if a.startswith("--")]
     api = Api()
-    janela = webview.create_window(TITULO, "ui/index.html", js_api=api, width=1100, height=720,
+    janela = webview.create_window(TITULO, _recurso("ui/index.html"), js_api=api, width=1100, height=720,
                                    min_size=(820, 560), background_color="#070204",
                                    fullscreen="--janela" not in opcoes)
     api._janela = janela

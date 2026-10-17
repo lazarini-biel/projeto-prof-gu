@@ -29,6 +29,22 @@ from ferramentas.categorias import montar_mapa, OUTROS   # noqa: E402
 from ferramentas.util import WINDOWS, tamanho_legivel, carregar_config, caminho as _caminho   # noqa: E402
 
 TITULO = "SPARTA // EXPLORADOR"
+
+
+def _recurso(rel):
+    """Caminho de um recurso (ui/), funcionando empacotado (.exe) ou como script."""
+    import os
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, rel)
+
+
+def _identidade_windows():
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("SPARTA.Explorador")
+        except OSError:
+            pass
 _MAPA = montar_mapa()
 
 
@@ -247,12 +263,13 @@ class Api:
 
 
 def main():
+    _identidade_windows()
     opcoes = [a for a in sys.argv[1:] if a.startswith("--")]
     caminhos = [a for a in sys.argv[1:] if not a.startswith("--")]
     inicio = caminhos[0] if caminhos else None
     api = Api()
     api._inicio = inicio
-    janela = webview.create_window(TITULO, "ui/index.html", js_api=api, width=1240, height=780,
+    janela = webview.create_window(TITULO, _recurso("ui/index.html"), js_api=api, width=1240, height=780,
                                    min_size=(900, 600), background_color="#070204",
                                    fullscreen="--janela" not in opcoes)
     api._janela = janela
