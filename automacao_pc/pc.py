@@ -24,6 +24,7 @@ Sem --executar, os comandos que mexem em arquivos só mostram uma prévia.
 import argparse
 import subprocess
 import sys
+from pathlib import Path as _Path
 import time
 
 from ferramentas import (agendador, clima, discos, duplicados, energia, inicio, intro, limpeza,
@@ -176,6 +177,19 @@ def cmd_clima(cfg, args):
     clima.mostrar(cfg)
 
 
+def cmd_explorador(cfg, args):
+    script = _Path(__file__).resolve().parent / "explorador" / "explorador.py"
+    exe = sys.executable
+    pyw = exe[:-len("python.exe")] + "pythonw.exe" if exe.lower().endswith("python.exe") else exe
+    import os
+    pyw = pyw if os.path.exists(pyw) else exe
+    try:
+        subprocess.Popen([pyw, str(script), *(args.pasta or [])])
+        tema.saida("Abrindo o Explorador de arquivos...")
+    except OSError as erro:
+        tema.saida(f"Não consegui abrir: {erro}")
+
+
 def cmd_temp(cfg, args):
     sistema.temperatura_cmd()
 
@@ -304,6 +318,10 @@ def montar_parser():
     s = sub.add_parser("clima", help="clima e manchetes do dia")
     s.set_defaults(func=cmd_clima)
 
+    s = sub.add_parser("explorador", help="abre o Explorador de arquivos do SPARTA")
+    s.add_argument("pasta", nargs="*")
+    s.set_defaults(func=cmd_explorador)
+
     s = sub.add_parser("temp", help="temperaturas (CPU/GPU/placa, quando disponível)")
     s.set_defaults(func=cmd_temp)
 
@@ -347,7 +365,7 @@ _TITULOS_CMD = {
     "top": "Top processos", "painel": "Painel no navegador", "pastas": "Espaço por pasta",
     "fechar": "Liberar memória", "internet": "Teste de internet", "rede": "Dispositivos na rede",
     "notas": "Lembretes / notas", "foco": "Modos de foco", "atualizar": "Atualizar programas",
-    "clima": "Clima e notícias",
+    "clima": "Clima e notícias", "explorador": "Explorador de arquivos",
     "downloads": "Downloads antigos", "temp": "Temperaturas", "inicializar": "Inicialização",
 }
 
@@ -357,7 +375,8 @@ def rodar(cfg, parser, argv, perguntar, topo=True):
     (ou, sem ninguém no teclado, mostra o comando completo para aplicar)."""
     if topo and argv and argv[0] not in (
             "sistema", "top", "fechar", "internet", "rede", "notas",
-            "foco", "atualizar", "downloads", "temp", "inicializar", "clima"):   # têm cabeçalho
+            "foco", "atualizar", "downloads", "temp", "inicializar", "clima",
+            "explorador"):   # têm cabeçalho
         tema.cabecalho(_TITULOS_CMD.get(argv[0], argv[0]))
         print()
     args = parser.parse_args(argv)
@@ -384,6 +403,7 @@ MENU = [
     ("Top processos (quem usa CPU/RAM)", ["top"]),
     ("Programas que abrem com o Windows", ["inicializar"]),
     ("Liberar memória / fechar programas", ["fechar"]),
+    ("Explorador de arquivos", ["explorador"]),
     ("Painel do PC no navegador", ["painel"]),
     ("Testar internet", ["internet"]),
     ("Dispositivos na rede", ["rede"]),

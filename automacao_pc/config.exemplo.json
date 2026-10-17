@@ -113,6 +113,10 @@
     "minimo_mb": 50
   },
 
+  "explorador": {
+    "pasta_inicial": "%USERPROFILE%"
+  },
+
   "painel_web": {
     "porta": 0
   },

@@ -218,6 +218,14 @@ Mensagens de qualquer ID fora da lista são ignoradas. Comandos enviados com o P
 
 ---
 
+## O Explorador de arquivos
+```
+Dois cliques em explorador/Explorador.bat   (ou: py pc.py explorador)
+```
+Um explorador no estilo SPARTA (vermelho), ligado ao Windows: navegar pelos discos e pastas, **filtrar/colorir por categoria**, **organizar a pasta por tipo** num clique, **renomear**, **mover**, **excluir** (vai para a Lixeira), criar pasta e **buscar**. Clique duplo abre o arquivo no programa padrão. **F11** alterna tela cheia.
+
+Para levar como atalho/.exe: `explorador/gerar_exe.bat`.
+
 ## 3. O COFRE (senhas)
 
 ```
