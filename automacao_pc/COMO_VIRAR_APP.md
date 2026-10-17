@@ -1,7 +1,7 @@
 # SPARTA — virar aplicativo de verdade (.exe com logo, na Área de Trabalho)
 
 Isso transforma a central e os três apps em **executáveis `.exe`** com o **logo
-SPARTA** (o elmo vermelho), e coloca os **atalhos na sua Área de Trabalho**.
+SPARTA** (os logos vermelhos), e coloca os **atalhos na sua Área de Trabalho**.
 Some o visual de "Arquivo em Lotes" (.bat) e o ícone da cobrinha do Python.
 
 ## Como fazer (uma vez)
@@ -27,21 +27,24 @@ da construção — pode apagar.
   na primeira vez que a central abre. Edite esse arquivo para ajustar pastas,
   agendamentos, etc.
 - **Fixar na barra de tarefas / menu Iniciar:** clique com o botão direito no
-  `.exe` (ou no atalho) → *Fixar*. O ícone do elmo aparece certinho.
+  `.exe` (ou no atalho) → *Fixar*. O ícone do SPARTA aparece certinho.
 - **Cada app é independente.** A central (`SPARTA.exe`) chama o `Explorador.exe`
   e o `Mixer.exe` que estão **na mesma pasta `dist\`** — por isso mantenha os
   quatro juntos.
 
 ## Trocar o logo depois
 
-O logo é desenhado por código. Para mudar e regenerar os ícones:
+Os ícones vêm das artes em `assets\arte\` (sparta / cofre / arquivos / mixer).
+Para trocar: substitua a arte correspondente e regenere os ícones:
 
 ```
 cd automacao_pc
-py assets\gerar_icones.py
+py assets\converter_logos.py
 ```
 
-Isso reescreve `assets\sparta.ico`, `cofre.ico`, `explorador.ico`, `mixer.ico`.
+Isso reescreve `assets\sparta.ico`, `cofre.ico`, `explorador.ico`, `mixer.ico`
+(recortando o emblema, sem o texto). Se a arte nova tiver outro tamanho ou
+enquadramento, ajuste as caixas de recorte no topo do `converter_logos.py`.
 Depois é só rodar o `CONSTRUIR_APPS.bat` de novo.
 
 ## Gerar um app só
