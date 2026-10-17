@@ -1,2 +1,11 @@
 __pycache__/
 *.pyc
+
+# AutomacaoPC: configuração pessoal, registros e cofres nunca vão para o Git
+automacao_pc/config.json
+automacao_pc/logs/
+cofre.dat
+cofre.dat.*
+build/
+dist/
+*.spec

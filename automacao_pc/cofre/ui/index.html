@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPARTA // COFRE</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<canvas id="chuva" aria-hidden="true"></canvas>
+<div class="scanlines" aria-hidden="true"></div>
+
+<!-- ============================== LOGIN ============================== -->
+<section id="tela-login" class="tela ativa">
+  <div class="canto sup-esq">SISTEMA SPARTA // COFRE v1.0<br><span id="relogio">--:--:--</span></div>
+  <div class="canto sup-dir">CANAL: <b class="ok">CRIPTOGRAFADO</b><br>AES-256-GCM · SCRYPT</div>
+  <div class="canto inf-esq" id="caminho-cofre">—</div>
+  <div class="canto inf-dir">NÍVEL DE ACESSO: <b>OMEGA</b></div>
+
+  <div class="login-centro">
+    <div class="hud" id="hud">
+      <svg viewBox="0 0 220 220" class="radar" aria-hidden="true">
+        <circle cx="110" cy="110" r="104" class="anel fino"/>
+        <circle cx="110" cy="110" r="92" class="anel tracejado gira-lento"/>
+        <circle cx="110" cy="110" r="78" class="anel arco gira-rapido"/>
+        <circle cx="110" cy="110" r="64" class="anel fino"/>
+        <g class="gira-reverso">
+          <path d="M110 6 L110 20 M110 200 L110 214 M6 110 L20 110 M200 110 L214 110" class="mira"/>
+        </g>
+        <path d="M110 110 L110 18 A92 92 0 0 1 175 45 Z" class="varredura"/>
+      </svg>
+      <svg viewBox="0 0 64 64" class="cadeado" aria-hidden="true">
+        <path class="arco-cadeado" d="M20 28 V20 a12 12 0 0 1 24 0 V28"/>
+        <rect x="14" y="28" width="36" height="28" rx="4"/>
+        <circle cx="32" cy="40" r="4"/><path d="M32 44 V49"/>
+      </svg>
+    </div>
+
+    <div class="terminal" id="boot" aria-live="polite"></div>
+
+    <form id="form-login" autocomplete="off" class="escondido">
+      <label for="senha" id="rotulo-senha">CREDENCIAL DO AGENTE</label>
+      <div class="campo-neon">
+        <input type="password" id="senha" spellcheck="false" autocomplete="off">
+        <button type="button" class="olho" data-alvo="senha" title="Mostrar/ocultar">◉</button>
+      </div>
+      <div id="bloco-criar" class="escondido">
+        <label for="senha2">CONFIRME A CREDENCIAL</label>
+        <div class="campo-neon"><input type="password" id="senha2" spellcheck="false" autocomplete="off"></div>
+        <div class="medidor"><i id="medidor-login"></i></div>
+        <p class="dica" id="dica-criar"></p>
+      </div>
+      <button type="submit" class="botao-principal" id="botao-login">AUTENTICAR</button>
+      <p class="status-login" id="status-login" role="status"></p>
+    </form>
+  </div>
+</section>
+
+<!-- ============================ DECIFRANDO ============================ -->
+<section id="decifrando" class="sobreposicao" aria-live="assertive">
+  <div class="decifra-caixa">
+    <pre id="matriz-hex"></pre>
+    <div class="etapas" id="etapas"></div>
+    <div class="barra"><i id="barra-progresso"></i></div>
+    <h1 id="veredito" data-texto=""></h1>
+  </div>
+</section>
+
+<!-- ============================== COFRE =============================== -->
+<section id="tela-cofre" class="tela">
+  <header class="topo">
+    <div class="logo"><span class="losango">◈</span> SPARTA <small id="contagem">0 registros</small></div>
+    <div class="busca">
+      <input type="search" id="busca" placeholder="Buscar por site, usuário, categoria…  (Ctrl+F)">
+    </div>
+    <nav class="acoes">
+      <button id="bt-novo" class="botao destaque">＋ Novo</button>
+      <button id="bt-gerador" class="botao">⚿ Gerador</button>
+      <button id="bt-importar" class="botao">⇪ Importar</button>
+      <button id="bt-ajustes" class="botao">⚙</button>
+      <button id="bt-bloquear" class="botao perigo" title="Bloquear agora (Ctrl+L)">⏻ Bloquear</button>
+    </nav>
+  </header>
+
+  <div class="corpo">
+    <aside class="lateral">
+      <h3>CATEGORIAS</h3>
+      <ul id="categorias"></ul>
+      <div class="dica-atalho">
+        <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>A</kbd>
+        <p>em qualquer site ou programa preenche o login automaticamente.</p>
+        <p class="estado-atalho" id="estado-atalho"></p>
+      </div>
+      <div class="auto-bloqueio">AUTO-BLOQUEIO <b id="timer-bloqueio">--:--</b></div>
+    </aside>
+
+    <main class="lista" id="lista"></main>
+
+    <section class="detalhe" id="detalhe">
+      <div class="vazio">
+        <svg viewBox="0 0 64 64"><rect x="14" y="28" width="36" height="28" rx="4"/><path d="M20 28 V20 a12 12 0 0 1 24 0 V28"/></svg>
+        <p>Selecione um registro</p>
+      </div>
+    </section>
+  </div>
+</section>
+
+<!-- ============================== MODAIS ============================== -->
+<dialog id="modal-editor" class="modal">
+  <form method="dialog" id="form-editor">
+    <h2 id="titulo-editor">NOVO REGISTRO</h2>
+    <div class="grade">
+      <label>Título<input name="titulo" placeholder="Gmail, Gov.br, Banco…"></label>
+      <label>Categoria<input name="categoria" list="lista-categorias" placeholder="Geral"></label>
+      <label class="largo">Endereço do site<input name="url" placeholder="https://accounts.google.com"></label>
+      <label>Usuário / e-mail / CPF<input name="usuario" autocomplete="off" spellcheck="false"></label>
+      <label>Senha
+        <span class="campo-com-botoes">
+          <input name="senha" type="password" autocomplete="off" spellcheck="false">
+          <button type="button" class="mini olho" data-alvo-nome="senha">◉</button>
+          <button type="button" class="mini" id="bt-gerar-editor" title="Gerar senha forte">⚄</button>
+        </span>
+        <span class="medidor"><i id="medidor-editor"></i></span>
+        <small id="forca-editor"></small>
+      </label>
+      <label>Abrir no navegador<select name="navegador" id="sel-navegador"><option value="">Padrão do Windows</option></select></label>
+      <label>Palavras do título da janela<input name="palavras" placeholder="ex.: Conta Google, Gmail"></label>
+      <label class="largo">Sequência de preenchimento
+        <input name="sequencia" placeholder="{USUARIO}{TAB}{SENHA}{ENTER}" spellcheck="false">
+        <small>Login em duas telas? Use <code>{USUARIO}{ENTER}{ESPERA:2000}{SENHA}{ENTER}</code></small>
+      </label>
+      <label class="largo">Notas<textarea name="notas" rows="3"></textarea></label>
+      <label class="check"><input type="checkbox" name="favorito"> ★ Favorito</label>
+    </div>
+    <datalist id="lista-categorias"></datalist>
+    <footer>
+      <button value="cancelar" class="botao" formnovalidate>Cancelar</button>
+      <button value="salvar" class="botao destaque" id="bt-salvar">Salvar</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog id="modal-gerador" class="modal estreito">
+  <form method="dialog">
+    <h2>GERADOR DE SENHAS</h2>
+    <output id="senha-gerada" class="senha-gerada">—</output>
+    <div class="medidor"><i id="medidor-gerador"></i></div>
+    <label>Tamanho: <b id="rotulo-tamanho">20</b>
+      <input type="range" id="g-tamanho" min="8" max="64" value="20"></label>
+    <div class="opcoes">
+      <label class="check"><input type="checkbox" id="g-mai" checked> A–Z</label>
+      <label class="check"><input type="checkbox" id="g-min" checked> a–z</label>
+      <label class="check"><input type="checkbox" id="g-num" checked> 0–9</label>
+      <label class="check"><input type="checkbox" id="g-sim" checked> !@#$</label>
+      <label class="check"><input type="checkbox" id="g-amb" checked> sem ambíguos (l, 1, O, 0)</label>
+    </div>
+    <footer>
+      <button type="button" class="botao" id="bt-regerar">↻ Outra</button>
+      <button type="button" class="botao" id="bt-copiar-gerada">Copiar</button>
+      <button value="fechar" class="botao destaque">Fechar</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog id="modal-ajustes" class="modal">
+  <form method="dialog" id="form-ajustes">
+    <h2>AJUSTES</h2>
+    <div class="grade">
+      <label>Bloquear após (minutos sem uso)<input type="number" name="bloqueio_minutos" min="1" max="120"></label>
+      <label>Apagar senha copiada após (segundos)<input type="number" name="limpar_copia_segundos" min="5" max="300"></label>
+    </div>
+    <h3>TROCAR SENHA MESTRA</h3>
+    <div class="grade">
+      <label class="largo">Senha atual<input type="password" name="atual" autocomplete="off"></label>
+      <label>Nova senha<input type="password" name="nova" autocomplete="off"></label>
+      <label>Confirmar nova senha<input type="password" name="confirmacao" autocomplete="off"></label>
+    </div>
+    <button type="button" class="botao" id="bt-trocar-senha">Trocar senha mestra</button>
+    <h3>ARQUIVO DO COFRE</h3>
+    <p class="dica"><code id="ajustes-caminho"></code><br>Uma cópia de segurança fica sempre ao lado, com final <code>.bak</code>.</p>
+    <button type="button" class="botao" id="bt-backup">Salvar cópia de segurança em…</button>
+    <footer>
+      <button value="cancelar" class="botao" formnovalidate>Fechar</button>
+      <button value="salvar" class="botao destaque">Salvar ajustes</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog id="modal-escolher" class="modal estreito">
+  <form method="dialog">
+    <h2>PREENCHER LOGIN</h2>
+    <p class="dica">Janela: <b id="escolher-janela"></b></p>
+    <input type="search" id="escolher-busca" placeholder="Buscar…">
+    <ul id="escolher-lista" class="escolher-lista"></ul>
+    <label class="check"><input type="checkbox" id="escolher-ensinar" checked> Lembrar desta janela para este login</label>
+    <footer><button value="cancelar" class="botao">Cancelar</button></footer>
+  </form>
+</dialog>
+
+<dialog id="modal-confirmar" class="modal estreito">
+  <form method="dialog">
+    <h2 id="confirmar-titulo">CONFIRMAR</h2>
+    <p id="confirmar-texto"></p>
+    <footer>
+      <button value="nao" class="botao">Cancelar</button>
+      <button value="sim" class="botao perigo">Confirmar</button>
+    </footer>
+  </form>
+</dialog>
+
+<div class="controles-janela">
+  <button type="button" id="bt-tela-cheia" title="Tela cheia (F11)">⛶</button>
+  <button type="button" id="bt-sair" class="fechar" title="Fechar o cofre">✕</button>
+</div>
+
+<div id="avisos" class="avisos" aria-live="polite"></div>
+
+<script src="abertura.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

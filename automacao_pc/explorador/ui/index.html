@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPARTA // EXPLORADOR</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="scanlines" aria-hidden="true"></div>
+
+<header class="topo">
+  <div class="logo"><span class="losango">◈</span> SPARTA <small>EXPLORADOR</small></div>
+  <div class="caminho" id="caminho"></div>
+  <div class="busca"><input type="search" id="busca" placeholder="Buscar nesta pasta…  (Ctrl+F)"></div>
+  <div class="janela-botoes">
+    <button id="bt-tela-cheia" title="Tela cheia (F11)">⛶</button>
+    <button id="bt-sair" class="fechar" title="Fechar">✕</button>
+  </div>
+</header>
+
+<div class="corpo">
+  <aside class="lateral">
+    <h3>LOCAIS</h3>
+    <ul id="atalhos"></ul>
+    <h3>DISCOS</h3>
+    <ul id="discos"></ul>
+  </aside>
+
+  <main class="principal">
+    <div class="barra-ferramentas">
+      <button id="bt-voltar" title="Voltar (Alt+←)">←</button>
+      <button id="bt-acima" title="Pasta acima (Alt+↑)">↑</button>
+      <button id="bt-atualizar" title="Atualizar (F5)">↻</button>
+      <span class="sep"></span>
+      <button id="bt-nova" class="destaque">＋ Nova pasta</button>
+      <button id="bt-organizar" title="Separar por tipo">⇅ Organizar por tipo</button>
+      <span class="sep"></span>
+      <button id="bt-renomear" disabled>✎ Renomear</button>
+      <button id="bt-mover" disabled>➔ Mover</button>
+      <button id="bt-excluir" class="perigo" disabled>🗑 Excluir</button>
+      <span class="flex"></span>
+      <div class="filtros" id="filtros"></div>
+      <div class="zoom" title="Zoom (Ctrl + roda do mouse)">
+        <button id="bt-zoom-menos" title="Diminuir (Ctrl -)">A−</button>
+        <button id="bt-zoom-mais" title="Aumentar (Ctrl +)">A+</button>
+      </div>
+      <button id="bt-visao" title="Alternar lista/grade">▦</button>
+      <label class="check"><input type="checkbox" id="mostrar-ocultos"> ocultos</label>
+    </div>
+
+    <div class="cabecalho-lista" id="cab-lista">
+      <span class="col-nome">Nome</span>
+      <span class="col-cat">Categoria</span>
+      <span class="col-tam">Tamanho</span>
+      <span class="col-data">Modificado</span>
+    </div>
+    <div class="lista" id="lista" tabindex="0"></div>
+
+    <footer class="status"><span id="status">—</span><span id="status-dir" class="dir"></span></footer>
+  </main>
+</div>
+
+<ul id="menu-contexto" class="menu-contexto"></ul>
+
+<dialog id="modal-texto" class="modal">
+  <form method="dialog">
+    <h2 id="mt-titulo">—</h2>
+    <input type="text" id="mt-input" autocomplete="off" spellcheck="false">
+    <footer>
+      <button value="cancelar" class="btn" formnovalidate>Cancelar</button>
+      <button value="ok" class="btn destaque">OK</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog id="modal-confirmar" class="modal estreito">
+  <form method="dialog">
+    <h2 id="mc-titulo">Confirmar</h2>
+    <p id="mc-texto"></p>
+    <footer>
+      <button value="nao" class="btn">Cancelar</button>
+      <button value="sim" class="btn perigo">Confirmar</button>
+    </footer>
+  </form>
+</dialog>
+
+<div id="avisos" class="avisos" aria-live="polite"></div>
+<script src="app.js"></script>
+</body>
+</html>
