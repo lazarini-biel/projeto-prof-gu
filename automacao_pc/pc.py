@@ -177,6 +177,25 @@ def cmd_clima(cfg, args):
     clima.mostrar(cfg)
 
 
+def _abrir_app(pasta_rel, nome, extra=()):
+    script = _Path(__file__).resolve().parent / pasta_rel / nome
+    exe = sys.executable
+    pyw = exe[:-len("python.exe")] + "pythonw.exe" if exe.lower().endswith("python.exe") else exe
+    import os
+    pyw = pyw if os.path.exists(pyw) else exe
+    try:
+        subprocess.Popen([pyw, str(script), *extra])
+        return True
+    except OSError as erro:
+        tema.saida(f"Não consegui abrir: {erro}")
+        return False
+
+
+def cmd_mixer(cfg, args):
+    if _abrir_app("mixer", "mixer.py"):
+        tema.saida("Abrindo o Mixer de volume...")
+
+
 def cmd_explorador(cfg, args):
     script = _Path(__file__).resolve().parent / "explorador" / "explorador.py"
     exe = sys.executable
@@ -322,6 +341,9 @@ def montar_parser():
     s.add_argument("pasta", nargs="*")
     s.set_defaults(func=cmd_explorador)
 
+    s = sub.add_parser("mixer", help="abre o Mixer de volume do SPARTA")
+    s.set_defaults(func=cmd_mixer)
+
     s = sub.add_parser("temp", help="temperaturas (CPU/GPU/placa, quando disponível)")
     s.set_defaults(func=cmd_temp)
 
@@ -365,7 +387,7 @@ _TITULOS_CMD = {
     "top": "Top processos", "painel": "Painel no navegador", "pastas": "Espaço por pasta",
     "fechar": "Liberar memória", "internet": "Teste de internet", "rede": "Dispositivos na rede",
     "notas": "Lembretes / notas", "foco": "Modos de foco", "atualizar": "Atualizar programas",
-    "clima": "Clima e notícias", "explorador": "Explorador de arquivos",
+    "clima": "Clima e notícias", "explorador": "Explorador de arquivos", "mixer": "Mixer de volume",
     "downloads": "Downloads antigos", "temp": "Temperaturas", "inicializar": "Inicialização",
 }
 
@@ -376,7 +398,7 @@ def rodar(cfg, parser, argv, perguntar, topo=True):
     if topo and argv and argv[0] not in (
             "sistema", "top", "fechar", "internet", "rede", "notas",
             "foco", "atualizar", "downloads", "temp", "inicializar", "clima",
-            "explorador"):   # têm cabeçalho
+            "explorador", "mixer"):   # têm cabeçalho
         tema.cabecalho(_TITULOS_CMD.get(argv[0], argv[0]))
         print()
     args = parser.parse_args(argv)
@@ -404,6 +426,7 @@ MENU = [
     ("Programas que abrem com o Windows", ["inicializar"]),
     ("Liberar memória / fechar programas", ["fechar"]),
     ("Explorador de arquivos", ["explorador"]),
+    ("Mixer de volume", ["mixer"]),
     ("Painel do PC no navegador", ["painel"]),
     ("Testar internet", ["internet"]),
     ("Dispositivos na rede", ["rede"]),

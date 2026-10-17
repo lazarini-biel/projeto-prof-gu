@@ -226,6 +226,14 @@ Um explorador no estilo SPARTA (vermelho), ligado ao Windows: navegar pelos disc
 
 Para levar como atalho/.exe: `explorador/gerar_exe.bat`.
 
+## O Mixer de volume
+```
+Dois cliques em mixer/Mixer.bat   (ou: py pc.py mixer)
+```
+Um mixer estilo mesa de som (vermelho): **volume por aplicativo**, **volume geral** e **mudo**, cada um no seu fader. Precisa das bibliotecas de áudio uma vez: `py -m pip install pycaw comtypes`.
+
+**Passar de 100%** (boost): o Windows não deixa por software puro, então o SPARTA controla o **Equalizer APO** (gratuito). Instale-o uma vez (o botão no mixer abre a página) e o controle BOOST de cada canal passa a funcionar acima de 100%. Mudanças no boost podem exigir rodar o SPARTA como administrador (o Equalizer APO fica em Arquivos de Programas).
+
 ## 3. O COFRE (senhas)
 
 ```
